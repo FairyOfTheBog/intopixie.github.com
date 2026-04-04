@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "VT323", ui-sans-serif, system-ui, sans-serif;
+  --font-pixel: "Press Start 2P", cursive;
+}
+
+@layer base {
+  html, body, #root {
+    @apply h-full overflow-hidden m-0 p-0;
+  }
+  body {
+    @apply text-[#2c1e1e] font-sans;
+    background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)), url('https://github.com/FairyOfTheBog/myimgsources/blob/main/Gemini_Generated_Image_z5z9vz5z9vz5z9vz.png?raw=true');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    image-rendering: pixelated;
+  }
+}
+
+@utility pixel-border {
+  box-shadow: 
+    0 -4px 0 0 #000,
+    0 4px 0 0 #000,
+    -4px 0 0 0 #000,
+    4px 0 0 0 #000;
+}
+
+@utility pixel-border-inset {
+  box-shadow: 
+    inset 0 -4px 0 0 rgba(0,0,0,0.2),
+    inset 0 4px 0 0 rgba(255,255,255,0.1),
+    inset -4px 0 0 0 rgba(0,0,0,0.2),
+    inset 4px 0 0 0 rgba(255,255,255,0.1);
+}
+
+@utility pixel-card {
+  @apply bg-[#4a3535] pixel-border p-4;
+}
+
+@utility pixel-button {
+  @apply bg-[#ff9e9e] hover:bg-[#ffbaba] active:translate-y-1 px-3 py-1.5 text-black transition-all text-[12px] font-pixel;
+  box-shadow: 
+    inset -3px -3px 0px 0px rgba(0,0,0,0.2),
+    inset 3px 3px 0px 0px rgba(255,255,255,0.4),
+    0 0 0 3px #000;
+  border-radius: 4px;
+}
+
+@utility pixel-button-secondary {
+  @apply bg-[#9ed5ff] hover:bg-[#badeff] active:translate-y-1 px-3 py-1.5 text-black transition-all text-[12px] font-pixel;
+  box-shadow: 
+    inset -3px -3px 0px 0px rgba(0,0,0,0.2),
+    inset 3px 3px 0px 0px rgba(255,255,255,0.4),
+    0 0 0 3px #000;
+  border-radius: 4px;
+}
+
+@utility pixel-text-shadow {
+  text-shadow: 2px 2px 0px #000;
+}
+
+@utility pixelated {
+  image-rendering: pixelated;
+}
+
+/* Custom scrollbar for pixel look */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 0px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #fefefe;
+  box-shadow: inset 0 0 0 2px #b6b4b4;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a67c52;
+}
+
+* {
+  overflow-x: hidden;
+}
+
+.custom-scrollbar {
+  overflow-x: hidden !important;
+}
