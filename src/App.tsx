@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { GameState, CharacterMakerState, Gender, NPC, InventoryItem, Item } from './types';
-import { ITEMS, NPCS, SKIN_COLORS, HAIR_COLORS, INITIAL_QUESTS, OUTFITS, HAIR_STYLES } from './constants';
+import { ITEMS, NPCS, SKIN_COLORS, HAIR_COLORS, INITIAL_QUESTS, OUTFITS, HAIR_STYLES, DAILY_EVENTS, AVATARS } from './constants';
 import CharacterMaker from './components/CharacterMaker';
 import Inventory from './components/Inventory';
 import Social from './components/Social';
 import LoadingPage from './components/LoadingPage';
 import PlayerStatus from './components/PlayerStatus';
-import { Coins, Save, Settings } from 'lucide-react';
+import { Coins, Settings, Heart, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { storageService } from './services/storageService';
 import confetti from 'canvas-confetti';
@@ -30,6 +30,7 @@ const INITIAL_STATE: GameState = {
       hairColor: HAIR_COLORS[0],
       outfit: OUTFITS[0],
       accessory: 'None',
+      avatar: AVATARS[0],
     },
     inventory: Array(24).fill(null),
     money: 500,
@@ -39,6 +40,8 @@ const INITIAL_STATE: GameState = {
   quests: INITIAL_QUESTS,
   hasCreatedCharacter: false,
   currentDay: 1,
+  currentTime: 360,
+  currentDailyEvent: null,
   friendships: {},
   triggeredEvents: [],
   chatHistories: {},
@@ -82,11 +85,37 @@ export default function App() {
             ...savedState.player.stats
           }
         },
+        currentDay: savedState.currentDay || 1,
+        currentTime: savedState.currentTime || 360,
         quests: savedState.quests || INITIAL_QUESTS,
+        currentDailyEvent: savedState.currentDailyEvent || null,
         chatHistories: savedState.chatHistories || {}
       });
     }
   }, []);
+
+  useEffect(() => {
+    if (page !== 'dashboard') return;
+    const timer = setInterval(() => {
+      setGameState(prev => {
+        let nextTime = prev.currentTime + 10;
+        if (nextTime >= 1560) {
+          handleNextDay();
+          return prev;
+        }
+        return { ...prev, currentTime: nextTime };
+      });
+    }, 7000);
+    return () => clearInterval(timer);
+  }, [page]);
+
+  const formatTime = (minutes: number) => {
+    const hours = Math.floor(minutes / 60) % 24;
+    const mins = minutes % 60;
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${mins.toString().padStart(2, '0')} ${ampm}`;
+  };
 
   const finishCharacterCreation = () => {
     const updatedState = { ...gameState, hasCreatedCharacter: true };
@@ -284,6 +313,56 @@ export default function App() {
     confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
   };
 
+  const handleUseItem = (index: number) => {
+    setGameState(prev => {
+      const slot = prev.player.inventory[index];
+      if (!slot || slot.item.type !== 'food') return prev;
+
+      const newStats = { ...prev.player.stats };
+      if (slot.item.effects) {
+        if (slot.item.effects.health) newStats.health = Math.min(newStats.maxHealth, newStats.health + slot.item.effects.health);
+        if (slot.item.effects.energy) newStats.energy = Math.min(newStats.maxEnergy, newStats.energy + slot.item.effects.energy);
+        if (slot.item.effects.attack) newStats.attack += slot.item.effects.attack;
+      }
+
+      const newInventory = [...prev.player.inventory];
+      if (slot.quantity > 1) {
+        newInventory[index] = { ...slot, quantity: slot.quantity - 1 };
+      } else {
+        newInventory[index] = null;
+      }
+
+      sounds.playSuccess();
+      showToast(`Used ${slot.item.name}!`);
+
+      return {
+        ...prev,
+        player: { ...prev.player, stats: newStats, inventory: newInventory }
+      };
+    });
+  };
+
+  const handleSplitStack = (index: number) => {
+    setGameState(prev => {
+      const slot = prev.player.inventory[index];
+      if (!slot || slot.quantity <= 1) return prev;
+
+      const emptySlotIndex = prev.player.inventory.findIndex(s => s === null);
+      if (emptySlotIndex === -1) {
+        showToast('Inventory full!');
+        return prev;
+      }
+
+      const newInventory = [...prev.player.inventory];
+      const splitAmount = Math.floor(slot.quantity / 2);
+      newInventory[index] = { ...slot, quantity: slot.quantity - splitAmount };
+      newInventory[emptySlotIndex] = { ...slot, quantity: splitAmount, acquiredAt: Date.now() };
+
+      sounds.playSelect();
+      return { ...prev, player: { ...prev.player, inventory: newInventory } };
+    });
+  };
+
   const handleNextDay = () => {
     setGameState(prev => {
       const nextDay = prev.currentDay + 1;
@@ -296,17 +375,17 @@ export default function App() {
       return {
         ...prev,
         currentDay: nextDay,
+        currentTime: 360,
+        currentDailyEvent: null,
         player: {
           ...prev.player,
-          stats: {
-            ...prev.player.stats,
-            energy: prev.player.stats.maxEnergy,
-          }
+          stats: { ...prev.player.stats, energy: prev.player.stats.maxEnergy }
         },
         quests: updatedQuests
       };
     });
     sounds.playSelect();
+    showToast('A new day begins...');
   };
 
   return (
@@ -331,13 +410,13 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="h-screen flex items-center justify-center p-4"
+            className="min-h-screen flex items-start md:items-center justify-center p-2 md:p-4 bg-[#2c1e1e] overflow-y-auto"
           >
-            <div className="flex-1 flex flex-col items-center justify-center p-4 bg-black/40 backdrop-blur-md overflow-y-auto">
+            <div className="w-full max-w-4xl flex flex-col items-center justify-start md:justify-center py-4 md:py-8">
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="w-full max-w-4xl my-auto"
+                className="w-full"
               >
                 <h1 className="font-pixel text-2xl text-center mb-8 pixel-text-shadow text-white">Create Your Avatar</h1>
                 <CharacterMaker
@@ -379,12 +458,12 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="h-screen flex flex-col"
+            className="h-screen flex flex-col overflow-hidden"
           >
             {/* Settings Modal */}
             <AnimatePresence>
               {showSettings && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 overflow-hidden">
                   <motion.div
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
@@ -394,12 +473,12 @@ export default function App() {
                     <h2 className="font-pixel text-lg text-yellow-400 mb-4 pixel-text-shadow">
                       {isResetConfirmOpen ? 'Reset Game?' : 'Settings'}
                     </h2>
-                    <div className="flex flex-col gap-2 mb-6">
+                    <div className="flex flex-col gap-2 mb-2 overflow-hidden">
                       {!isResetConfirmOpen ? (
                         <>
                           <button onClick={handleSave} className="pixel-button w-full">Save Game</button>
                           <button onClick={handleLoad} className="pixel-button w-full">Load Game</button>
-                          <button onClick={() => setIsResetConfirmOpen(true)} className="pixel-button w-full bg-red-900/50 hover:bg-red-800/50">Reset Game</button>
+                          <button onClick={() => setIsResetConfirmOpen(true)} className="pixel-button w-full">Reset Game</button>
                           <button onClick={() => { setShowCredits(true); setShowSettings(false); }} className="pixel-button w-full">Credits</button>
                           <button onClick={() => setShowSettings(false)} className="pixel-button-secondary w-full">Close</button>
                         </>
@@ -408,7 +487,7 @@ export default function App() {
                           <p className="font-pixel text-[10px] text-white/70 mb-4 leading-relaxed">
                             This will delete all your progress permanently.
                           </p>
-                          <button onClick={handleReset} className="pixel-button w-full bg-red-600 hover:bg-red-500">YES, RESET</button>
+                          <button onClick={handleReset} className="pixel-button w-full">YES, RESET</button>
                           <button onClick={() => setIsResetConfirmOpen(false)} className="pixel-button-secondary w-full">NO, CANCEL</button>
                         </>
                       )}
@@ -420,96 +499,82 @@ export default function App() {
 
             {/* Header - only on Home tab */}
             {activeTab === 'home' && (
-              <header className="sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-black/30 backdrop-blur-md border-b-2 border-white/10">
-
-                {/* Toast Notification */}
+              <header
+                className="flex-shrink-0 flex items-center justify-between px-4 py-3 z-40 overflow-hidden"
+                style={{ background: 'rgba(255, 212, 128, 0.8)' }}
+              >
                 {saveMessage && (
                   <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
-                    className="absolute top-20 left-1/2 -translate-x-1/2 bg-[#2c1e1e] border-2 border-[#bdf3ff] text-white font-pixel text-xs px-4 py-2 z-50"
+                    className="absolute top-24 left-1/2 -translate-x-1/2 bg-[#2c1e1e] border-2 border-[#bdf3ff] text-white font-pixel text-xs px-4 py-2 z-50 pointer-events-none"
                   >
                     {saveMessage}
                   </motion.div>
                 )}
 
                 {/* Left: Circular Avatar + Stat Bars */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 md:gap-3 overflow-hidden">
                   <button
                     onClick={() => setShowPlayerStatus(true)}
-                    className="w-20 h-20 rounded-full overflow-hidden border-4 border-yellow-500 transition-transform active:scale-95 relative bg-white flex-shrink-0 shadow-lg"
+                    className="avatar transition-transform active:scale-95 flex-shrink-0 shadow-lg"
                     style={{ boxShadow: '0 0 14px rgba(255,215,0,0.5)' }}
                   >
                     <img
-                      src="https://github.com/FairyOfTheBog/myimgsources/blob/main/Untitled2_20260403202904.png?raw=true"
+                      src={gameState.player.appearance.avatar}
                       alt="Profile"
-                      className="absolute pixelated"
-                      style={{ width: '200%', height: '200%', top: '-40%', left: '-50%', objectFit: 'contain' }}
+                      className="w-full h-full object-cover pixelated"
                       referrerPolicy="no-referrer"
                     />
-                    {gameState.player.appearance.outfit && (
-                      <img
-                        src={gameState.player.appearance.outfit}
-                        alt="Outfit"
-                        className="absolute pixelated"
-                        style={{ width: '200%', height: '200%', top: '-40%', left: '-50%', objectFit: 'contain', zIndex: 20 }}
-                        referrerPolicy="no-referrer"
-                      />
-                    )}
-                    {gameState.player.appearance.hair && (
-                      <img
-                        src={gameState.player.appearance.hair}
-                        alt="Hair"
-                        className="absolute pixelated"
-                        style={{ width: '200%', height: '200%', top: '-40%', left: '-50%', objectFit: 'contain', zIndex: 30 }}
-                        referrerPolicy="no-referrer"
-                      />
-                    )}
                   </button>
 
-                  {/* Stat Bars */}
-                  <div className="flex flex-col gap-1">
-                    <div className="w-32 h-3 bg-black/50 pixel-border-inset relative overflow-hidden">
+                  {/* Stat Bars + Time */}
+                  <div className="flex flex-col gap-1 overflow-hidden">
+                    <div className="bg-black/50 px-2 py-0.5 rounded border border-white/10 flex items-center gap-1.5 mb-1">
+                      <Clock size={8} className="text-yellow-400 flex-shrink-0" />
+                      <span className="font-pixel text-[6px] md:text-[8px] text-white tracking-tighter whitespace-nowrap">
+                        Day {gameState.currentDay} - {formatTime(gameState.currentTime)}
+                      </span>
+                    </div>
+                    <div className="w-24 md:w-32 h-2.5 md:h-3 bg-black/50 pixel-border-inset relative overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all duration-500"
                         style={{ width: `${(gameState.player.stats.health / gameState.player.stats.maxHealth) * 100}%` }}
                       />
-                      <span className="absolute inset-0 flex items-center justify-center text-[6px] font-pixel text-white">HEALTH</span>
+                      <span className="absolute inset-0 flex items-center justify-center text-[5px] md:text-[6px] font-pixel text-white">HEALTH</span>
                     </div>
-                    <div className="w-32 h-3 bg-black/50 pixel-border-inset relative overflow-hidden">
+                    <div className="w-24 md:w-32 h-2.5 md:h-3 bg-black/50 pixel-border-inset relative overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-orange-600 to-orange-400 transition-all duration-500"
                         style={{ width: `${Math.min(100, (gameState.player.stats.attack / 50) * 100)}%` }}
                       />
-                      <span className="absolute inset-0 flex items-center justify-center text-[6px] font-pixel text-white">ATTACK</span>
+                      <span className="absolute inset-0 flex items-center justify-center text-[5px] md:text-[6px] font-pixel text-white">ATTACK</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Right: Money + Buttons */}
-                <div className="flex flex-col items-end gap-2">
-                  <div className="flex items-center gap-1 text-yellow-300 font-pixel text-xs drop-shadow-md">
-                    <Coins size={14} />
-                    <span>{gameState.player.money}g</span>
+                {/* Right: Money + Settings */}
+                <div className="flex flex-col items-end gap-1 md:gap-2 flex-shrink-0 overflow-hidden">
+                  <div className="flex items-center gap-1 text-yellow-900 font-pixel text-[10px] md:text-xs">
+                    <Coins size={12} className="flex-shrink-0" />
+                    <span className="whitespace-nowrap">{gameState.player.money}g</span>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setShowSettings(true)}
-                      className="pixel-button-secondary w-10 h-10 flex items-center justify-center p-0 font-pixel text-[12px] overflow-hidden"
-                      title="Settings"
-                    >
-                      <Settings size={24} />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setShowSettings(true)}
+                    className="pixel-button-secondary w-8 h-8 md:w-10 md:h-10 flex items-center justify-center p-0 flex-shrink-0"
+                    title="Settings"
+                  >
+                    <Settings size={16} />
+                  </button>
                 </div>
-
               </header>
             )}
 
             {/* Main Content */}
             <main className="flex-1 relative overflow-hidden">
-              <div className={`absolute inset-0 p-4 pb-24 ${activeTab === 'home' ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
+              {/* ✅ Removed pb-24 for home tab so avatar fills all available space */}
+              <div className={`absolute inset-0 ${activeTab === 'home' ? 'overflow-hidden p-0' : 'overflow-y-auto custom-scrollbar p-4 pb-24'}`}>
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeTab}
@@ -521,34 +586,93 @@ export default function App() {
                   >
                     {/* HOME TAB */}
                     {activeTab === 'home' && (
-                      <div className="flex flex-col items-center justify-center h-full w-full gap-8 relative">
-                        <div className="relative group w-[2500px] h-[10000px] max-w-full max-h-[90vh] flex items-center justify-center">
-                          <div className="absolute inset-0 bg-white/10 blur-3xl rounded-full -z-10 group-hover:bg-white/20 transition-all duration-500" />
-                          <div className="relative flex items-center justify-center w-full h-full">
+                      <div className="relative h-full w-full overflow-hidden">
+
+                        {/* Spouse Indicator */}
+                        {gameState.npcs.find(n => n.isMarried) && (() => {
+                          const spouse = gameState.npcs.find(n => n.isMarried)!;
+                          return (
+                            <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/40 px-4 py-1.5 rounded-full border border-pink-500/30 backdrop-blur-sm z-50">
+                              <motion.img
+                                src={spouse.avatar}
+                                alt={spouse.name}
+                                className="w-6 h-6 pixelated rounded-full border border-pink-500/50"
+                                referrerPolicy="no-referrer"
+                                animate={{ y: [0, -2, 0] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                              />
+                              <div className="flex items-center gap-2">
+                                <Heart size={12} fill="#ff006e" color="#ff006e" className="animate-pulse" />
+                                <span className="font-pixel text-[10px] text-pink-300">
+                                  Married to {spouse.name}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* ✅ Character Display — truly fills the entire main area */}
+                        <motion.button
+                          onClick={() => setShowPlayerStatus(true)}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="absolute inset-0 cursor-pointer group"
+                          style={{ background: 'none', border: 'none', padding: 0 }}
+                        >
+                          <div className="absolute inset-0 bg-white/5 group-hover:bg-white/10 transition-colors -z-10" />
+                          {/* ✅ Base image: fills container, respects aspect ratio */}
+                          <img
+                            src="https://github.com/FairyOfTheBog/myimgsources/blob/main/Untitled2_20260403202904.png?raw=true"
+                            alt="Character Base"
+                            className="pixelated"
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              objectPosition: 'center bottom',
+                              zIndex: 10,
+                            }}
+                            referrerPolicy="no-referrer"
+                          />
+                          {/* ✅ Outfit overlay: same box, always aligned */}
+                          {gameState.player.appearance.outfit && (
                             <img
-                              src="https://github.com/FairyOfTheBog/myimgsources/blob/main/Untitled2_20260403202904.png?raw=true"
-                              alt="Character Base"
-                              className="relative z-10 w-full h-full object-contain pixelated"
+                              src={gameState.player.appearance.outfit}
+                              alt="Outfit Overlay"
+                              className="pixelated"
+                              style={{
+                                position: 'absolute',
+                                inset: 0,
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain',
+                                objectPosition: 'center bottom',
+                                zIndex: 20,
+                              }}
                               referrerPolicy="no-referrer"
                             />
-                            {gameState.player.appearance.outfit && (
-                              <img
-                                src={gameState.player.appearance.outfit}
-                                alt="Outfit Overlay"
-                                className="absolute z-20 w-full h-full object-contain pixelated"
-                                referrerPolicy="no-referrer"
-                              />
-                            )}
-                            {gameState.player.appearance.hair && (
-                              <img
-                                src={gameState.player.appearance.hair}
-                                alt="Hair Overlay"
-                                className="absolute z-30 w-full h-full object-contain pixelated"
-                                referrerPolicy="no-referrer"
-                              />
-                            )}
-                          </div>
-                        </div>
+                          )}
+                          {/* ✅ Hair overlay: same box, always aligned */}
+                          {gameState.player.appearance.hair && (
+                            <img
+                              src={gameState.player.appearance.hair}
+                              alt="Hair Overlay"
+                              className="pixelated"
+                              style={{
+                                position: 'absolute',
+                                inset: 0,
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain',
+                                objectPosition: 'center bottom',
+                                zIndex: 30,
+                              }}
+                              referrerPolicy="no-referrer"
+                            />
+                          )}
+                        </motion.button>
                       </div>
                     )}
 
@@ -585,6 +709,8 @@ export default function App() {
                         onItemClick={(item, index) => {
                           console.log('Clicked item:', item);
                         }}
+                        onUseItem={handleUseItem}
+                        onSplitStack={handleSplitStack}
                       />
                     )}
 
@@ -598,7 +724,7 @@ export default function App() {
                             <select
                               value={questSortBy}
                               onChange={(e) => setQuestSortBy(e.target.value as any)}
-                              className="bg-black/50 border border-white/20 text-white font-pixel text-[8px] p-1 rounded outline-none"
+                              className="bg-black/50 border border-white/20 text-white font-pixel text-[8px] p-1 rounded outline-none appearance-none"
                             >
                               <option value="dueDate">Due Date</option>
                               <option value="type">Type</option>
@@ -668,41 +794,52 @@ export default function App() {
             </main>
 
             {/* Bottom Nav */}
-            <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#ffffff] border-t-4 border-[#5d4037] px-2 py-4 flex justify-around items-center shadow-[0_-4px_20px_rgba(0,0,0,0.2)]">
-              <NavButton
-                active={activeTab === 'home'}
-                onClick={() => handleTabChange('home')}
-                icon={<img src="https://github.com/FairyOfTheBog/myimgsources/blob/main/Untitled2_20260404091030.png?raw=true" alt="Home" className="w-10 h-10 pixelated" referrerPolicy="no-referrer" />}
-              />
-              <NavButton
-                active={activeTab === 'social'}
-                onClick={() => handleTabChange('social')}
-                icon={<img src="https://i.pinimg.com/736x/a4/08/6e/a4086e19dbc6ba1cddef1012de3c5daa.jpg" alt="Social" className="w-10 h-10 pixelated" referrerPolicy="no-referrer" />}
-              />
-              <NavButton
-                active={activeTab === 'quests'}
-                onClick={() => handleTabChange('quests')}
-                icon={<img src="https://github.com/FairyOfTheBog/myimgsources/blob/main/Untitled2_20260404091252.png?raw=true" alt="Quests" className="w-10 h-10 pixelated" referrerPolicy="no-referrer" />}
-              />
-              <NavButton
-                active={activeTab === 'inventory'}
-                onClick={() => handleTabChange('inventory')}
-                icon={<img src="https://github.com/FairyOfTheBog/myimgsources/blob/main/Untitled2_20260404091128.png?raw=true" alt="Inventory" className="w-10 h-10 pixelated" referrerPolicy="no-referrer" />}
-              />
+            <nav 
+              className="flex-shrink-0 z-40 px-2 py-0.5 flex justify-around items-center shadow-[0_-4px_20px_rgba(0,0,0,0.2)] overflow-hidden scrollbar-hide"
+              style={{ background: 'rgba(230, 153, 0, 0.9)' }}
+            >
+              <div className="flex-1 flex justify-center border-r border-white/20 scrollbar-hide">
+                <NavButton
+                  active={activeTab === 'home'}
+                  onClick={() => handleTabChange('home')}
+                  icon={<img src="https://github.com/FairyOfTheBog/myimgsources/blob/main/Untitled2_20260404091030.png?raw=true" alt="Home" className="w-10 h-10 pixelated" referrerPolicy="no-referrer" />}
+                />
+              </div>
+              <div className="flex-1 flex justify-center border-r border-white/20 scrollbar-hide">
+                <NavButton
+                  active={activeTab === 'social'}
+                  onClick={() => handleTabChange('social')}
+                  icon={<img src="https://github.com/FairyOfTheBog/myimgsources/blob/main/mail%20(1).png?raw=true" alt="Social" className="w-150 h-15 pixelated" referrerPolicy="no-referrer" />}
+                />
+              </div>
+              <div className="flex-1 flex justify-center border-r border-white/20 scrollbar-hide">
+                <NavButton
+                  active={activeTab === 'quests'}
+                  onClick={() => handleTabChange('quests')}
+                  icon={<img src="https://github.com/FairyOfTheBog/myimgsources/blob/main/Untitled2_20260404091252.png?raw=true" alt="Quests" className="w-10 h-10 pixelated" referrerPolicy="no-referrer" />}
+                />
+              </div>
+              <div className="flex-1 flex justify-center scrollbar-hide">
+                <NavButton
+                  active={activeTab === 'inventory'}
+                  onClick={() => handleTabChange('inventory')}
+                  icon={<img src="https://github.com/FairyOfTheBog/myimgsources/blob/main/Untitled2_20260404091128.png?raw=true" alt="Inventory" className="w-10 h-10 pixelated" referrerPolicy="no-referrer" />}
+                />
+              </div>
             </nav>
 
             {/* Credits Modal */}
             <AnimatePresence>
               {showCredits && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 overflow-hidden">
                   <motion.div
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.9, opacity: 0 }}
-                    className="pixel-card w-full max-w-sm text-center"
+                    className="pixel-card w-full max-w-sm text-center overflow-hidden"
                   >
                     <h2 className="font-pixel text-lg text-yellow-400 mb-4 pixel-text-shadow">Credits</h2>
-                    <div className="space-y-4 mb-6">
+                    <div className="space-y-4 mb-6 overflow-hidden">
                       <div>
                         <p className="font-pixel text-[10px] text-white/70">Developer</p>
                         <p className="font-pixel text-sm">AI Studio Build Agent</p>
@@ -747,7 +884,7 @@ function NavButton({ active, onClick, icon }: { active: boolean; onClick: () => 
   return (
     <button
       onClick={onClick}
-      className={`flex items-center justify-center p-2 transition-all ${active ? 'scale-125' : 'opacity-60 hover:opacity-100 hover:scale-110'}`}
+      className={`flex items-center justify-center p-1 transition-all overflow-hidden scrollbar-hide ${active ? 'scale-125' : 'opacity-60 hover:opacity-100 hover:scale-110'}`}
     >
       <div className={active ? 'drop-shadow-[0_0_12px_rgba(255,255,255,0.8)]' : ''}>
         {icon}

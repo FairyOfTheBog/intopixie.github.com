@@ -12,12 +12,34 @@
   }
   body {
     @apply text-[#2c1e1e] font-sans;
-    background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)), url('https://github.com/FairyOfTheBog/myimgsources/blob/main/Gemini_Generated_Image_z5z9vz5z9vz5z9vz.png?raw=true');
+    background: linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.2)), url('https://github.com/FairyOfTheBog/myimgsources/blob/main/Gemini_Generated_Image_z5z9vz5z9vz5z9vz.png?raw=true');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     background-attachment: fixed;
     image-rendering: pixelated;
+  }
+  img.character-base {
+    @apply w-full max-w-[1000px] h-auto;
+  }
+
+  .avatar {
+    @apply w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden border-2 md:border-4 border-orange-500 bg-white relative;
+  }
+
+  .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;
+  }
+}
+
+@utility scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
   }
 }
 
@@ -91,5 +113,16 @@
 }
 
 .custom-scrollbar {
-  overflow-x: hidden !important;
+  overflow-x: auto;
+}
+
+/* Suppress all stray scrollbars */
+.fixed, .pixel-card {
+  overflow: hidden;
+}
+
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }

@@ -14,6 +14,7 @@ export interface CharacterMakerState {
   hairColor: string;
   outfit: string;
   accessory: string;
+  avatar: string;
 }
 
 export type Rarity = 'Common' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary';
@@ -26,6 +27,7 @@ export interface Item {
   type: 'gift' | 'food' | 'resource' | 'tool';
   value: number;
   rarity: Rarity;
+  effects?: Partial<CharacterStats>;
 }
 
 export interface InventoryItem {
@@ -58,6 +60,20 @@ export interface CalendarEvent {
   season: 'Spring' | 'Summer' | 'Fall' | 'Winter';
   name: string;
   description: string;
+}
+
+export interface DailyEvent {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  type: 'festival' | 'weather' | 'npc_event' | 'luck';
+  effects?: {
+    friendshipMultiplier?: number;
+    shopDiscount?: number;
+    luckBonus?: number;
+    specialQuestId?: string;
+  };
 }
 
 export interface HeartEvent {
@@ -110,6 +126,8 @@ export interface GameState {
   quests: Quest[];
   hasCreatedCharacter: boolean;
   currentDay: number;
+  currentTime: number; // minutes from midnight, e.g., 360 = 6:00 AM
+  currentDailyEvent?: DailyEvent | null;
   friendships: Record<string, number>;
   triggeredEvents: string[]; // IDs of events already seen
   chatHistories?: Record<string, { role: 'user' | 'npc', text: string, imageUrl?: string }[]>;

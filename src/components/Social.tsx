@@ -90,7 +90,7 @@ export default function Social({
     setIsTyping(true);
 
     try {
-      const response = await chatWithNPC(selectedNPC, userMsg, gameState.player);
+      const response = await chatWithNPC(selectedNPC, userMsg, gameState.player, gameState.currentDailyEvent);
       
       // Check if response includes an image tag like [IMAGE: keyword]
       let text = response || "...";
@@ -125,7 +125,7 @@ export default function Social({
 
     setIsTyping(true);
     try {
-      const reaction = await getGiftReaction(selectedNPC, item.name, gameState.player);
+      const reaction = await getGiftReaction(selectedNPC, item.name, gameState.player, gameState.currentDailyEvent);
       
       let gain = 20;
       if (selectedNPC.loves.includes(item.id)) gain = 80;
@@ -165,19 +165,53 @@ export default function Social({
 
     if (selectedNPC.isDating) {
       sounds.playSelect();
-      onUpdateChatHistory(selectedNPC.id, { role: 'npc', text: "We're already dating, silly!" });
+      onUpdateChatHistory(selectedNPC.id, { role: 'npc', text: "We're already dating, silly! ❤️" });
       return;
     }
 
     sounds.playSuccess();
     onUpdateNPC(selectedNPC.id, { isDating: true });
     onRecordInteraction(selectedNPC.id);
-    onUpdateChatHistory(selectedNPC.id, { role: 'npc', text: "Oh! I'd love to go out with you! ❤️" });
+    onUpdateChatHistory(selectedNPC.id, { role: 'npc', text: "Oh! I'd love to go out with you! ❤️ I've been waiting for you to ask!" });
     confetti({
       particleCount: 150,
       spread: 70,
       origin: { y: 0.6 },
       colors: ['#ff006e', '#ff85a1']
+    });
+  };
+
+  const handlePropose = () => {
+    if (!selectedNPC) return;
+    
+    // Check if player is already married to someone else
+    const currentSpouse = gameState.npcs.find(n => n.isMarried);
+    if (currentSpouse && currentSpouse.id !== selectedNPC.id) {
+      sounds.playSelect();
+      onUpdateChatHistory(selectedNPC.id, { role: 'npc', text: `Wait... aren't you already married to ${currentSpouse.name}? I can't do that!` });
+      return;
+    }
+
+    if (!selectedNPC.isDating) {
+      sounds.playSelect();
+      onUpdateChatHistory(selectedNPC.id, { role: 'npc', text: "Marriage? We haven't even started dating yet!" });
+      return;
+    }
+    if (selectedNPC.friendship < 2500) {
+      sounds.playSelect();
+      onUpdateChatHistory(selectedNPC.id, { role: 'npc', text: "I love you, but I'm not sure if I'm ready for such a big step yet..." });
+      return;
+    }
+
+    sounds.playSuccess();
+    onUpdateNPC(selectedNPC.id, { isMarried: true, isDating: false });
+    onRecordInteraction(selectedNPC.id);
+    onUpdateChatHistory(selectedNPC.id, { role: 'npc', text: "YES! A thousand times yes! I want to spend the rest of my life with you! 💍❤️" });
+    confetti({
+      particleCount: 300,
+      spread: 100,
+      origin: { y: 0.5 },
+      colors: ['#ff006e', '#ffffff', '#ffd700']
     });
   };
 
@@ -196,112 +230,149 @@ export default function Social({
     return true;
   };
 
-  const getNextMilestone = (friendship: number) => {
+  const getNextMilestone = (npc: NPC) => {
+    const friendship = npc.friendship;
     if (friendship < 500) return { text: "Next: 2 Hearts (New Quests/Events)", target: 500 };
     if (friendship < 1000) return { text: "Next: 4 Hearts (New Quests/Events)", target: 1000 };
     if (friendship < 1500) return { text: "Next: 6 Hearts (New Quests/Events)", target: 1500 };
     if (friendship < 2000) return { text: "Next: 8 Hearts (Can Ask Out)", target: 2000 };
-    if (friendship < 2500) return { text: "Next: 10 Hearts (Best Friend)", target: 2500 };
+    if (friendship < 2500) return { text: "Next: 10 Hearts (Can Propose)", target: 2500 };
+    if (npc.isMarried) return { text: "Happily Married ❤️", target: 2500 };
     return { text: "Max Friendship Reached!", target: 2500 };
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto h-full flex flex-col">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full overflow-hidden">
-        {/* NPC List - Hidden on mobile if chat is open */}
-        <div className={`md:col-span-1 flex flex-col gap-2 h-full ${isChatOpen ? 'hidden md:flex' : 'flex'}`}>
-          <h2 className="font-pixel text-xs mb-4 pixel-text-shadow">Characters</h2>
-          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2">
-            {gameState.npcs.map(npc => {
-              const questStatus = (gameState.quests || []).find(q => 
-                q.giverId === npc.id && 
-                (q.status === 'active' || (q.status === 'available' && (q.requiredFriendship === undefined || npc.friendship >= q.requiredFriendship)))
-              )?.status;
+    <div className="w-full max-w-5xl mx-auto h-full flex flex-col gap-4 overflow-hidden">
+      {/* NPC List - Horizontal Scroll */}
+      <div className={`flex flex-col gap-2 flex-shrink-0 pt-6 ${isChatOpen ? 'hidden md:flex' : 'flex'}`}>
+        <div className="px-4 mb-2">
+          <div className="pixel-card !bg-[#8b623d] !p-2 border-white/20">
+            <h2 className="font-pixel text-[13px] pixel-text-shadow text-white text-center">Villagers You May Know</h2>
+          </div>
+        </div>
+        <div className="flex overflow-x-auto pb-6 gap-6 scrollbar-hide px-4 snap-x">
+          {gameState.npcs.map(npc => {
+            const questStatus = (gameState.quests || []).find(q => 
+              q.giverId === npc.id && 
+              (q.status === 'active' || (q.status === 'available' && (q.requiredFriendship === undefined || npc.friendship >= q.requiredFriendship)))
+            )?.status;
 
-              return (
-                <div 
-                  key={npc.id}
-                  onClick={() => handleNPCSelect(npc)}
-                  className={`pixel-card cursor-pointer transition-all hover:translate-x-1 flex items-center gap-3 relative ${selectedNPC?.id === npc.id ? 'bg-[#5d4037] border-white' : ''}`}
-                >
-                  <div className="relative">
-                    <img src={npc.avatar} alt={npc.name} className="w-10 h-10 pixelated" referrerPolicy="no-referrer" />
-                    {questStatus === 'available' && (
-                      <div className="absolute -top-1 -right-1 bg-yellow-400 text-black font-pixel text-[10px] w-4 h-4 flex items-center justify-center rounded-full border-2 border-black animate-bounce">
-                        !
-                      </div>
-                    )}
-                    {questStatus === 'active' && (
-                      <div className="absolute -top-1 -right-1 bg-blue-400 text-white font-pixel text-[10px] w-4 h-4 flex items-center justify-center rounded-full border-2 border-black animate-pulse">
-                        ?
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-pixel text-[10px]">{npc.name}</p>
-                    <div className="flex flex-col gap-1 mt-1">
-                      <div className="flex gap-0.5">
-                        {[...Array(10)].map((_, i) => (
-                          <Heart 
-                            key={i} 
-                            size={6} 
-                            fill={i < Math.floor(npc.friendship / 250) ? "#ff006e" : "transparent"} 
-                            color={i < Math.floor(npc.friendship / 250) ? "#ff006e" : "#666"} 
-                          />
-                        ))}
-                      </div>
-                      {/* Friendship Progress Bar */}
-                      <div className="w-full bg-black/40 h-2 pixel-border-inset relative overflow-hidden">
-                        <div 
-                          className={`h-full bg-gradient-to-r from-pink-600 to-pink-400 transition-all duration-500 ${
-                            npc.friendship === 2500 ? 'shadow-[0_0_10px_rgba(255,0,110,0.6)]' : ''
-                          }`}
-                          style={{ 
-                            width: `${(npc.friendship / 2500) * 100}%`,
-                            boxShadow: npc.friendship === 2500 ? 'inset 0 0 5px rgba(255,255,255,0.4), 0 0 10px rgba(255,0,110,0.8)' : 'inset 0 0 5px rgba(255,255,255,0.2)'
-                          }}
+            return (
+              <div 
+                key={npc.id}
+                onClick={() => handleNPCSelect(npc)}
+                className={`flex-shrink-0 w-32 h-40 pixel-card cursor-pointer transition-all hover:-translate-y-1 flex flex-col items-center justify-between p-3 relative !bg-[#a67c52] border-white/20 snap-start ${selectedNPC?.id === npc.id ? 'ring-2 ring-white scale-105 z-10' : ''}`}
+              >
+                <div className="relative mb-2">
+                  <motion.img 
+                    src={npc.avatar} 
+                    alt={npc.name} 
+                    className="w-16 h-16 pixelated" 
+                    referrerPolicy="no-referrer"
+                    animate={{ 
+                      y: [0, -2, 0],
+                    }}
+                    transition={{ 
+                      duration: 2 + (parseInt(npc.id, 36) % 10) / 10, 
+                      repeat: Infinity, 
+                      ease: "easeInOut" 
+                    }}
+                  />
+                  {questStatus === 'available' && (
+                    <div className="absolute -top-1 -right-1 bg-yellow-400 text-black font-pixel text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-black animate-bounce">
+                      !
+                    </div>
+                  )}
+                  {questStatus === 'active' && (
+                    <div className="absolute -top-1 -right-1 bg-blue-400 text-white font-pixel text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-black animate-pulse">
+                      ?
+                    </div>
+                  )}
+                </div>
+                
+                <div className="text-center w-full">
+                  <p className="font-pixel text-[11px] text-white truncate mb-1">{npc.name}</p>
+                  <div className="flex flex-col gap-1 items-center">
+                    <div className="flex gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Heart 
+                          key={i} 
+                          size={8} 
+                          fill={i < Math.floor(npc.friendship / 500) ? "#ff006e" : "transparent"} 
+                          color={i < Math.floor(npc.friendship / 500) ? "#ff006e" : "#444"} 
                         />
-                      </div>
+                      ))}
+                    </div>
+                    {/* Compact Friendship Progress Bar */}
+                    <div className="w-full bg-black/40 h-1.5 pixel-border-inset relative overflow-hidden">
+                      <div 
+                        className={`h-full bg-gradient-to-r from-pink-600 to-pink-400 transition-all duration-500`}
+                        style={{ width: `${(npc.friendship / 2500) * 100}%` }}
+                      />
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
 
-        {/* Chat/Interaction Area - Fullscreen on mobile if chat is open */}
-        <div className={`md:col-span-2 h-full ${isChatOpen ? 'flex' : 'hidden md:flex'} flex-col`}>
+                {/* Status Badges */}
+                <div className="absolute top-1 left-1 flex flex-col gap-1">
+                  {npc.isMarried && <div className="w-2 h-2 bg-yellow-400 rounded-full border border-black" title="Spouse" />}
+                  {npc.isDating && <div className="w-2 h-2 bg-pink-400 rounded-full border border-black" title="Dating" />}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Chat/Interaction Area */}
+      <div className={`flex-1 h-full ${isChatOpen ? 'flex' : 'hidden md:flex'} flex-col overflow-hidden`}>
           {selectedNPC ? (
-            <div className="pixel-card h-full flex flex-col overflow-hidden relative">
+            <div className="pixel-card h-full flex flex-col overflow-hidden relative !bg-[#a67c52] border-white/20">
               {/* Mobile Back Button */}
               <button 
                 onClick={closeChat}
                 className="md:hidden absolute top-4 left-4 z-10 bg-black/50 p-2 rounded pixel-border"
               >
-                <CheckCircle className="rotate-180" size={16} />
+                <CheckCircle className="rotate-180 text-white" size={16} />
               </button>
 
-              <div className="flex items-center gap-4 border-b border-white/10 pb-4 mb-4 mt-8 md:mt-0">
-                <img src={selectedNPC.avatar} alt={selectedNPC.name} className="w-16 h-16 pixelated" referrerPolicy="no-referrer" />
+              <div className="flex items-center gap-6 border-b border-white/20 pb-4 mb-4 mt-8 md:mt-0">
+                <motion.img 
+                  src={selectedNPC.avatar} 
+                  alt={selectedNPC.name} 
+                  className="w-24 h-24 pixelated" 
+                  referrerPolicy="no-referrer"
+                  animate={{ 
+                    scale: [1, 1.05, 1],
+                  }}
+                  transition={{ 
+                    duration: 3, 
+                    repeat: Infinity, 
+                    ease: "easeInOut" 
+                  }}
+                />
                 <div className="flex-1">
-                  <h3 className="font-pixel text-sm">{selectedNPC.name}</h3>
-                  <p className="text-xs opacity-70">{selectedNPC.description}</p>
-                  <p className="text-[10px] mt-1 italic">Birthday: {selectedNPC.birthday}</p>
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-pixel text-[13px] text-white">{selectedNPC.name}</h3>
+                    {selectedNPC.isMarried && <span className="text-[10px] bg-yellow-500/40 text-yellow-200 px-1.5 rounded border border-yellow-500/30 font-pixel">Spouse</span>}
+                    {selectedNPC.isDating && <span className="text-[10px] bg-pink-500/40 text-pink-200 px-1.5 rounded border border-pink-500/30 font-pixel">Dating</span>}
+                  </div>
+                  <p className="text-[13px] text-white/90 mt-1">{selectedNPC.description}</p>
+                  <p className="text-[11px] text-white/70 mt-1 italic">Birthday: {selectedNPC.birthday}</p>
                   
-                  <div className="mt-2">
-                    <div className="flex justify-between items-center text-[8px] font-pixel mb-1">
-                      <span className="text-pink-300">{getNextMilestone(selectedNPC.friendship).text}</span>
-                      <span>{selectedNPC.friendship} / {getNextMilestone(selectedNPC.friendship).target}</span>
+                  <div className="mt-3">
+                    <div className="flex justify-between items-center text-[10px] font-pixel mb-1">
+                      <span className="text-pink-200">{getNextMilestone(selectedNPC).text}</span>
+                      <span className="text-white">{selectedNPC.friendship} / {getNextMilestone(selectedNPC).target}</span>
                     </div>
-                    <div className="w-full bg-black/50 h-2 pixel-border-inset relative overflow-hidden">
+                    <div className="w-full bg-black/50 h-3 pixel-border-inset relative overflow-hidden">
                       <div 
                         className={`h-full transition-all duration-500 bg-gradient-to-r from-pink-600 to-pink-400 ${
-                          selectedNPC.friendship >= getNextMilestone(selectedNPC.friendship).target ? 'shadow-[0_0_10px_rgba(255,0,110,0.6)]' : ''
+                          selectedNPC.friendship >= getNextMilestone(selectedNPC).target ? 'shadow-[0_0_10px_rgba(255,0,110,0.6)]' : ''
                         }`} 
                         style={{ 
-                          width: `${Math.min(100, (selectedNPC.friendship / getNextMilestone(selectedNPC.friendship).target) * 100)}%`,
-                          boxShadow: selectedNPC.friendship >= getNextMilestone(selectedNPC.friendship).target ? 'inset 0 0 5px rgba(255,255,255,0.4), 0 0 10px rgba(255,0,110,0.8)' : 'inset 0 0 5px rgba(255,255,255,0.2)'
+                          width: `${Math.min(100, (selectedNPC.friendship / getNextMilestone(selectedNPC).target) * 100)}%`,
+                          boxShadow: selectedNPC.friendship >= getNextMilestone(selectedNPC).target ? 'inset 0 0 5px rgba(255,255,255,0.4), 0 0 10px rgba(255,0,110,0.8)' : 'inset 0 0 5px rgba(255,255,255,0.2)'
                         }}
                       />
                     </div>
@@ -310,24 +381,24 @@ export default function Social({
               </div>
 
               {/* Chat History */}
-              <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-2 bg-black/20 pixel-border-inset rounded">
+              <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-3 bg-black/30 pixel-border-inset rounded">
                 {(!gameState.chatHistories?.[selectedNPC.id] || gameState.chatHistories[selectedNPC.id].length === 0) && (
-                  <p className="text-center opacity-40 text-xs mt-10">Start a conversation with {selectedNPC.name}...</p>
+                  <p className="text-center text-white/40 text-[13px] mt-10 font-pixel">Start a conversation with {selectedNPC.name}...</p>
                 )}
                 {(gameState.chatHistories?.[selectedNPC.id] || []).map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[80%] p-2 rounded pixel-border ${msg.role === 'user' ? 'bg-[#ff9e9e] text-black' : 'bg-[#9ed5ff] text-black'}`}>
+                    <div className={`max-w-[85%] p-3 rounded pixel-border ${msg.role === 'user' ? 'bg-[#ff9e9e] text-black' : 'bg-[#9ed5ff] text-black'}`}>
                       {msg.imageUrl && (
-                        <img src={msg.imageUrl} alt="Sent picture" className="w-full max-w-[150px] mb-2 pixelated border-2 border-black/20" referrerPolicy="no-referrer" />
+                        <img src={msg.imageUrl} alt="Sent picture" className="w-full max-w-[200px] mb-2 pixelated border-2 border-black/20" referrerPolicy="no-referrer" />
                       )}
-                      <p className="text-[11pt] leading-tight font-medium">{msg.text}</p>
+                      <p className="text-[13px] leading-tight font-medium">{msg.text}</p>
                     </div>
                   </div>
                 ))}
                 {isTyping && (
                   <div className="flex justify-start">
                     <div className="bg-[#9ed5ff] text-black p-2 rounded pixel-border animate-pulse">
-                      <p className="text-xs font-bold">...</p>
+                      <p className="text-[13px] font-bold">...</p>
                     </div>
                   </div>
                 )}
@@ -344,10 +415,19 @@ export default function Social({
                 </button>
                 <button 
                   onClick={handleAskOut}
-                  className="pixel-button-secondary flex items-center gap-2 text-pink-300"
+                  disabled={selectedNPC.isMarried}
+                  className={`pixel-button-secondary flex items-center gap-2 text-pink-300 ${selectedNPC.isMarried ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                 >
-                  <HeartHandshake size={14} /> Ask Out
+                  <HeartHandshake size={14} /> {selectedNPC.isDating ? 'Dating' : 'Ask Out'}
                 </button>
+                {selectedNPC.isDating && (
+                  <button 
+                    onClick={handlePropose}
+                    className="pixel-button-secondary flex items-center gap-2 text-yellow-400"
+                  >
+                    <Scroll size={14} /> Propose
+                  </button>
+                )}
                 {selectedNPC.friendship >= 2500 && !selectedNPC.isFriend && (
                   <button 
                     onClick={() => {
@@ -433,24 +513,23 @@ export default function Social({
                   onChange={(e) => setChatMessage(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleChat()}
                   placeholder="Say something..."
-                  className="flex-1 bg-[#2c1e1e] pixel-border-inset p-1.5 text-[10px] outline-none"
+                  className="flex-1 bg-black/40 pixel-border-inset p-2 text-[13px] text-white placeholder-white/40 outline-none"
                 />
                 <button 
                   onClick={handleChat}
                   disabled={isTyping}
-                  className="pixel-button p-1.5"
+                  className="pixel-button p-2"
                 >
-                  <MessageSquare size={14} />
+                  <MessageSquare size={16} />
                 </button>
               </div>
             </div>
           ) : (
-            <div className="pixel-card h-full flex items-center justify-center opacity-50">
-              <p className="font-pixel text-xs">Select a character to interact</p>
+            <div className="pixel-card h-full flex items-center justify-center !bg-[#a67c52] border-white/20">
+              <p className="font-pixel text-[13px] text-white opacity-60">Select a character to interact</p>
             </div>
           )}
         </div>
-      </div>
 
       {/* Gift Modal */}
       <AnimatePresence>

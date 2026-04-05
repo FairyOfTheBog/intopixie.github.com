@@ -1,11 +1,11 @@
-import { CalendarEvent, Item, NPC, HeartEvent, Quest } from "./types";
+import { CalendarEvent, Item, NPC, HeartEvent, Quest, DailyEvent } from "./types";
 
 export const ITEMS: Item[] = [
   { id: 'quartz', name: 'Quartz', description: 'A clear crystal commonly found in caves.', icon: '💎', type: 'gift', value: 25, rarity: 'Common' },
-  { id: 'salad', name: 'Salad', description: 'A healthy garden salad.', icon: '🥗', type: 'food', value: 40, rarity: 'Common' },
-  { id: 'coffee', name: 'Coffee', description: 'It smells great. This will surely give you a boost.', icon: '☕', type: 'food', value: 150, rarity: 'Uncommon' },
-  { id: 'sashimi', name: 'Sashimi', description: 'Raw fish sliced into thin pieces.', icon: '🍣', type: 'food', value: 75, rarity: 'Common' },
-  { id: 'beer', name: 'Beer', description: 'Drink in moderation.', icon: '🍺', type: 'food', value: 200, rarity: 'Uncommon' },
+  { id: 'salad', name: 'Salad', description: 'A healthy garden salad.', icon: '🥗', type: 'food', value: 40, rarity: 'Common', effects: { health: 20, energy: 30 } },
+  { id: 'coffee', name: 'Coffee', description: 'It smells great. This will surely give you a boost.', icon: '☕', type: 'food', value: 150, rarity: 'Uncommon', effects: { energy: 50 } },
+  { id: 'sashimi', name: 'Sashimi', description: 'Raw fish sliced into thin pieces.', icon: '🍣', type: 'food', value: 75, rarity: 'Common', effects: { health: 15, energy: 20 } },
+  { id: 'beer', name: 'Beer', description: 'Drink in moderation.', icon: '🍺', type: 'food', value: 200, rarity: 'Uncommon', effects: { energy: -10, health: 5 } },
   { id: 'cloth', name: 'Cloth', description: 'A bolt of fine wool cloth.', icon: '🧶', type: 'gift', value: 470, rarity: 'Rare' },
   { id: 'diamond', name: 'Diamond', description: 'A rare and valuable gem.', icon: '💎', type: 'gift', value: 750, rarity: 'Rare' },
   { id: 'pumpkin', name: 'Pumpkin', description: 'A fall favorite.', icon: '🎃', type: 'gift', value: 320, rarity: 'Uncommon' },
@@ -243,6 +243,16 @@ export const NPCS: NPC[] = [
   { id: 'wizard', name: 'Wizard', description: 'The Wizard lives in a tower in the forest.', avatar: 'https://stardewvalleywiki.com/mediawiki/images/c/c3/Wizard.png', gender: 'Male', birthday: 'Winter 17', loves: ['purple_mushroom', 'solar_essence', 'super_cucumber', 'void_essence'], likes: ['quartz'], dislikes: ['daffodil'], hates: ['holly'], personality: 'Mysterious, powerful, reclusive.', friendship: 0, isDating: false, isMarried: false },
 ];
 
+export const AVATARS = [
+  'https://i.pinimg.com/736x/31/83/47/31834799ce867ff11047f0f2502ddc38.jpg', // Default
+  'https://stardewvalleywiki.com/mediawiki/images/8/88/Abigail.png',
+  'https://stardewvalleywiki.com/mediawiki/images/a/a8/Sebastian.png',
+  'https://stardewvalleywiki.com/mediawiki/images/e/e6/Leah.png',
+  'https://stardewvalleywiki.com/mediawiki/images/9/95/Harvey.png',
+  'https://stardewvalleywiki.com/mediawiki/images/1/1b/Haley.png',
+  'https://stardewvalleywiki.com/mediawiki/images/9/94/Sam.png'
+];
+
 export const SKIN_COLORS = ['#f5d0c5', '#e8b5a0', '#c68642', '#8d5524', '#3c2e28'];
 export const HAIR_COLORS = ['#4a2c2a', '#2c1e1e', '#8b5e34', '#d4a373', '#9b2226', '#5a189a', '#0077b6'];
 export const HAIR_STYLES = [
@@ -260,3 +270,46 @@ export const OUTFITS = [
   'https://github.com/FairyOfTheBog/myimgsources/blob/main/outfitt.png?raw=true'
 ];
 export const ACCESSORIES = ['None', 'Glasses', 'Hat', 'Bow', 'Scarf', 'Monocle'];
+
+export const DAILY_EVENTS: DailyEvent[] = [
+  {
+    id: 'meteor_shower',
+    name: 'Meteor Shower',
+    description: 'The sky is filled with falling stars! You might find rare resources tomorrow.',
+    icon: '🌠',
+    type: 'weather',
+    effects: { luckBonus: 0.5 }
+  },
+  {
+    id: 'flower_festival',
+    name: 'Flower Festival',
+    description: 'The town is decorated with beautiful blooms. Everyone is in a great mood!',
+    icon: '🌸',
+    type: 'festival',
+    effects: { friendshipMultiplier: 1.5 }
+  },
+  {
+    id: 'market_day',
+    name: 'Market Day',
+    description: 'Traveling merchants have arrived. Prices are lower than usual!',
+    icon: '⚖️',
+    type: 'festival',
+    effects: { shopDiscount: 0.2 }
+  },
+  {
+    id: 'npc_gathering',
+    name: 'Community Picnic',
+    description: 'The villagers are gathering at the park. It\'s a great time to socialize!',
+    icon: '🧺',
+    type: 'npc_event',
+    effects: { friendshipMultiplier: 1.2 }
+  },
+  {
+    id: 'lucky_day',
+    name: 'Lucky Day',
+    description: 'The spirits are very happy today! Good things are bound to happen.',
+    icon: '🍀',
+    type: 'luck',
+    effects: { luckBonus: 0.3 }
+  }
+];

@@ -8,7 +8,7 @@ interface LoadingPageProps {
 export default function LoadingPage({ onLoadingComplete }: LoadingPageProps) {
   useEffect(() => {
     console.log("LoadingPage rendered");
-    const timer = setTimeout(onLoadingComplete, 5000); // 5 seconds loading
+    const timer = setTimeout(onLoadingComplete, 4000); // 4 seconds loading
     return () => clearTimeout(timer);
   }, [onLoadingComplete]);
 

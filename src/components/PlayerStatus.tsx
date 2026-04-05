@@ -19,9 +19,19 @@ export default function PlayerStatus({ player, currentDay, onClose }: PlayerStat
           X
         </button>
         <div className="flex justify-between items-center mb-8 border-b-4 border-white/10 pb-6">
-          <div className="flex flex-col">
-            <span className="text-gray-400 font-pixel text-[10px] mb-1">ROLE</span>
-            <div className="text-yellow-400 font-pixel text-xl pixel-text-shadow tracking-tighter">{player.role}</div>
+          <div className="flex items-center gap-4">
+            <div className="avatar flex-shrink-0 border-4 border-yellow-400">
+              <img 
+                src={player.appearance.avatar} 
+                alt="Player Avatar" 
+                className="w-full h-full object-cover pixelated" 
+                referrerPolicy="no-referrer" 
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-gray-400 font-pixel text-[10px] mb-1">ROLE</span>
+              <div className="text-yellow-400 font-pixel text-xl pixel-text-shadow tracking-tighter">{player.role}</div>
+            </div>
           </div>
           <div className="flex flex-col items-end">
             <span className="text-gray-400 font-pixel text-[10px] mb-1">TIME</span>
