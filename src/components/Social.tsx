@@ -239,15 +239,29 @@ export default function Social({
                   </div>
                   <div className="flex-1">
                     <p className="font-pixel text-[10px]">{npc.name}</p>
-                    <div className="flex gap-0.5 mt-1">
-                      {[...Array(10)].map((_, i) => (
-                        <Heart 
-                          key={i} 
-                          size={6} 
-                          fill={i < Math.floor(npc.friendship / 250) ? "#ff006e" : "transparent"} 
-                          color={i < Math.floor(npc.friendship / 250) ? "#ff006e" : "#666"} 
+                    <div className="flex flex-col gap-1 mt-1">
+                      <div className="flex gap-0.5">
+                        {[...Array(10)].map((_, i) => (
+                          <Heart 
+                            key={i} 
+                            size={6} 
+                            fill={i < Math.floor(npc.friendship / 250) ? "#ff006e" : "transparent"} 
+                            color={i < Math.floor(npc.friendship / 250) ? "#ff006e" : "#666"} 
+                          />
+                        ))}
+                      </div>
+                      {/* Friendship Progress Bar */}
+                      <div className="w-full bg-black/40 h-2 pixel-border-inset relative overflow-hidden">
+                        <div 
+                          className={`h-full bg-gradient-to-r from-pink-600 to-pink-400 transition-all duration-500 ${
+                            npc.friendship === 2500 ? 'shadow-[0_0_10px_rgba(255,0,110,0.6)]' : ''
+                          }`}
+                          style={{ 
+                            width: `${(npc.friendship / 2500) * 100}%`,
+                            boxShadow: npc.friendship === 2500 ? 'inset 0 0 5px rgba(255,255,255,0.4), 0 0 10px rgba(255,0,110,0.8)' : 'inset 0 0 5px rgba(255,255,255,0.2)'
+                          }}
                         />
-                      ))}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -280,10 +294,15 @@ export default function Social({
                       <span className="text-pink-300">{getNextMilestone(selectedNPC.friendship).text}</span>
                       <span>{selectedNPC.friendship} / {getNextMilestone(selectedNPC.friendship).target}</span>
                     </div>
-                    <div className="w-full bg-black/50 h-2 rounded-full overflow-hidden pixel-border-inset">
+                    <div className="w-full bg-black/50 h-2 pixel-border-inset relative overflow-hidden">
                       <div 
-                        className="bg-[#ff006e] h-full transition-all duration-500" 
-                        style={{ width: `${Math.min(100, (selectedNPC.friendship / getNextMilestone(selectedNPC.friendship).target) * 100)}%` }}
+                        className={`h-full transition-all duration-500 bg-gradient-to-r from-pink-600 to-pink-400 ${
+                          selectedNPC.friendship >= getNextMilestone(selectedNPC.friendship).target ? 'shadow-[0_0_10px_rgba(255,0,110,0.6)]' : ''
+                        }`} 
+                        style={{ 
+                          width: `${Math.min(100, (selectedNPC.friendship / getNextMilestone(selectedNPC.friendship).target) * 100)}%`,
+                          boxShadow: selectedNPC.friendship >= getNextMilestone(selectedNPC.friendship).target ? 'inset 0 0 5px rgba(255,255,255,0.4), 0 0 10px rgba(255,0,110,0.8)' : 'inset 0 0 5px rgba(255,255,255,0.2)'
+                        }}
                       />
                     </div>
                   </div>
