@@ -7,11 +7,9 @@ interface CharacterMakerProps {
   appearance: CharacterMakerState;
   gender: Gender;
   name: string;
-  role: string;
   onUpdateAppearance: (updates: Partial<CharacterMakerState>) => void;
   onUpdateGender: (gender: Gender) => void;
   onUpdateName: (name: string) => void;
-  onUpdateRole: (role: string) => void;
   onFinish: () => void;
 }
 
@@ -19,11 +17,9 @@ export default function CharacterMaker({
   appearance, 
   gender, 
   name,
-  role,
   onUpdateAppearance, 
   onUpdateGender,
   onUpdateName,
-  onUpdateRole,
   onFinish
 }: CharacterMakerProps) {
   const handleUpdateAppearance = (updates: Partial<CharacterMakerState>) => {
@@ -33,11 +29,6 @@ export default function CharacterMaker({
 
   const handleUpdateGender = (g: Gender) => {
     onUpdateGender(g);
-    sounds.playSelect();
-  };
-
-  const handleUpdateRole = (r: string) => {
-    onUpdateRole(r);
     sounds.playSelect();
   };
 
@@ -94,16 +85,29 @@ export default function CharacterMaker({
             </div>
             <div>
               <label className="font-pixel text-[10px] block mb-2 text-white">Gender</label>
-              <div className="flex gap-2">
-                {(['Male', 'Female'] as Gender[]).map(g => (
-                  <button
-                    key={g}
-                    onClick={() => handleUpdateGender(g)}
-                    className={`flex-1 ${gender === g ? 'pixel-button' : 'pixel-button-secondary'}`}
-                  >
-                    {g}
-                  </button>
-                ))}
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={() => handleUpdateGender('Male')}
+                  className={`transition-all hover:scale-110 active:scale-95 ${gender === 'Male' ? 'brightness-125 drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : 'brightness-75 grayscale-[20%]'}`}
+                >
+                  <img 
+                    src="https://github.com/FairyOfTheBog/myimgsources/blob/main/male.png?raw=true" 
+                    alt="Male" 
+                    className="w-12 h-12 pixelated" 
+                    referrerPolicy="no-referrer"
+                  />
+                </button>
+                <button
+                  onClick={() => handleUpdateGender('Female')}
+                  className={`transition-all hover:scale-110 active:scale-95 ${gender === 'Female' ? 'brightness-125 drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : 'brightness-75 grayscale-[20%]'}`}
+                >
+                  <img 
+                    src="https://github.com/FairyOfTheBog/myimgsources/blob/main/female.png?raw=true" 
+                    alt="Female" 
+                    className="w-12 h-12 pixelated" 
+                    referrerPolicy="no-referrer"
+                  />
+                </button>
               </div>
             </div>
           </div>
@@ -113,48 +117,6 @@ export default function CharacterMaker({
         <div className="flex-1 space-y-4 md:space-y-6 md:overflow-y-auto md:max-h-[70vh] p-2 md:p-6 custom-scrollbar">
           <h2 className="font-pixel text-[10px] md:text-xs mb-2 md:mb-4 pixel-text-shadow text-white">Customization</h2>
           
-          {/* Role Selection */}
-          <section>
-            <label className="font-pixel text-[10px] block mb-2 text-yellow-400">Choose Your Role</label>
-            <div className="flex items-center justify-center gap-4">
-              <button
-                onClick={() => {
-                  const currentIndex = TERRARIA_ROLES.indexOf(role);
-                  const nextIndex = (currentIndex - 1 + TERRARIA_ROLES.length) % TERRARIA_ROLES.length;
-                  handleUpdateRole(TERRARIA_ROLES[nextIndex]);
-                }}
-                className="hover:scale-110 active:scale-95 transition-transform"
-              >
-                <img 
-                  src="https://github.com/FairyOfTheBog/myimgsources/blob/main/Untitled2_20260404082041.png?raw=true" 
-                  alt="Prev" 
-                  className="w-10 h-10 pixelated" 
-                  referrerPolicy="no-referrer" 
-                />
-              </button>
-              
-              <div className="font-pixel text-[10px] text-white bg-black/40 px-4 py-2 pixel-border-inset min-w-[150px] text-center">
-                {role}
-              </div>
-
-              <button
-                onClick={() => {
-                  const currentIndex = TERRARIA_ROLES.indexOf(role);
-                  const nextIndex = (currentIndex + 1) % TERRARIA_ROLES.length;
-                  handleUpdateRole(TERRARIA_ROLES[nextIndex]);
-                }}
-                className="hover:scale-110 active:scale-95 transition-transform"
-              >
-                <img 
-                  src="https://github.com/FairyOfTheBog/myimgsources/blob/main/Untitled2_20260404082000.png?raw=true" 
-                  alt="Next" 
-                  className="w-10 h-10 pixelated" 
-                  referrerPolicy="no-referrer" 
-                />
-              </button>
-            </div>
-          </section>
-
           {/* Hair Style */}
           <section>
             <label className="font-pixel text-[10px] block mb-2 text-white">Hair Style</label>

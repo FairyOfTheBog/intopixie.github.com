@@ -1,18 +1,21 @@
-import { CalendarEvent, Item, NPC, HeartEvent, Quest, DailyEvent } from "./types";
+import { CalendarEvent, Item, NPC, HeartEvent, Quest, DailyEvent, ShopItem } from "./types";
 
 export const ITEMS: Item[] = [
-  { id: 'quartz', name: 'Quartz', description: 'A clear crystal commonly found in caves.', icon: '💎', type: 'gift', value: 25, rarity: 'Common' },
-  { id: 'salad', name: 'Salad', description: 'A healthy garden salad.', icon: '🥗', type: 'food', value: 40, rarity: 'Common', effects: { health: 20, energy: 30 } },
-  { id: 'coffee', name: 'Coffee', description: 'It smells great. This will surely give you a boost.', icon: '☕', type: 'food', value: 150, rarity: 'Uncommon', effects: { energy: 50 } },
-  { id: 'sashimi', name: 'Sashimi', description: 'Raw fish sliced into thin pieces.', icon: '🍣', type: 'food', value: 75, rarity: 'Common', effects: { health: 15, energy: 20 } },
-  { id: 'beer', name: 'Beer', description: 'Drink in moderation.', icon: '🍺', type: 'food', value: 200, rarity: 'Uncommon', effects: { energy: -10, health: 5 } },
-  { id: 'cloth', name: 'Cloth', description: 'A bolt of fine wool cloth.', icon: '🧶', type: 'gift', value: 470, rarity: 'Rare' },
-  { id: 'diamond', name: 'Diamond', description: 'A rare and valuable gem.', icon: '💎', type: 'gift', value: 750, rarity: 'Rare' },
-  { id: 'pumpkin', name: 'Pumpkin', description: 'A fall favorite.', icon: '🎃', type: 'gift', value: 320, rarity: 'Uncommon' },
-  { id: 'sunflower', name: 'Sunflower', description: 'A bright and happy flower.', icon: '🌻', type: 'gift', value: 80, rarity: 'Common' },
-  { id: 'mayonnaise', name: 'Mayonnaise', description: 'Lookin\' good.', icon: '🍯', type: 'gift', value: 190, rarity: 'Common' },
-  { id: 'prismatic_shard', name: 'Prismatic Shard', description: 'A very rare and powerful gem.', icon: '🌈', type: 'gift', value: 2000, rarity: 'Legendary' },
-  { id: 'golden_egg', name: 'Golden Egg', description: 'A rare egg from a golden chicken.', icon: '🥚', type: 'gift', value: 1000, rarity: 'Epic' },
+  { id: 'quartz', name: 'Quartz', description: 'A clear crystal commonly found in caves.', icon: '💎', sprite: 'https://github.com/FairyOfTheBog/myimgsources/blob/main/Quartz.png?raw=true', type: 'gift', value: 25, rarity: 'C' },
+  { id: 'salad', name: 'Salad', description: 'A healthy garden salad.', icon: '🥗', type: 'food', value: 40, rarity: 'C', effects: { health: 20, energy: 30 } },
+  { id: 'coffee', name: 'Coffee', description: 'It smells great. This will surely give you a boost.', icon: '☕', sprite: 'https://github.com/FairyOfTheBog/myimgsources/blob/main/Coffee.png?raw=true', type: 'food', value: 150, rarity: 'B', effects: { energy: 50 } },
+  { id: 'sashimi', name: 'Sashimi', description: 'Raw fish sliced into thin pieces.', icon: '🍣', type: 'food', value: 75, rarity: 'C', effects: { health: 15, energy: 20 } },
+  { id: 'beer', name: 'Beer', description: 'Drink in moderation.', icon: '🍺', type: 'food', value: 200, rarity: 'B', effects: { energy: -10, health: 5 } },
+  { id: 'cloth', name: 'Cloth', description: 'A bolt of fine wool cloth.', icon: '🧶', type: 'gift', value: 470, rarity: 'A' },
+  { id: 'diamond', name: 'Diamond', description: 'A rare and valuable gem.', icon: '💎', sprite: 'https://github.com/FairyOfTheBog/myimgsources/blob/main/Diamond.png?raw=true', type: 'gift', value: 750, rarity: 'S' },
+  { id: 'pumpkin', name: 'Pumpkin', description: 'A fall favorite.', icon: '🎃', type: 'gift', value: 320, rarity: 'B' },
+  { id: 'sunflower', name: 'Sunflower', description: 'A bright and happy flower.', icon: '🌻', type: 'gift', value: 80, rarity: 'C' },
+  { id: 'mayonnaise', name: 'Mayonnaise', description: 'Lookin\' good.', icon: '🍯', type: 'gift', value: 190, rarity: 'C' },
+  { id: 'prismatic_shard', name: 'Prismatic Shard', description: 'A very rare and powerful gem.', icon: '🌈', sprite: 'https://github.com/FairyOfTheBog/myimgsources/blob/main/Prismatic_Shard.png?raw=true', type: 'gift', value: 2000, rarity: 'SSR' },
+  { id: 'golden_egg', name: 'Golden Egg', description: 'A rare egg from a golden chicken.', icon: '🥚', type: 'gift', value: 1000, rarity: 'SS' },
+  { id: 'frozen_tear', name: 'Frozen Tear', description: 'A crystal supposed to be the frozen tears of a yeti.', icon: '💧', sprite: 'https://github.com/FairyOfTheBog/myimgsources/blob/main/Frozen_Tear.png?raw=true', type: 'gift', value: 75, rarity: 'B' },
+  { id: 'lucky_lunch', name: 'Lucky Lunch', description: 'A special meal that brings good luck.', icon: '🍱', sprite: 'https://github.com/FairyOfTheBog/myimgsources/blob/main/Lucky_Lunch.png?raw=true', type: 'food', value: 250, rarity: 'A', effects: { health: 40, energy: 60, luck: 0.2 } },
+  { id: 'pizza', name: 'Pizza', description: 'It\'s popular for all the right reasons.', icon: '🍕', sprite: 'https://github.com/FairyOfTheBog/myimgsources/blob/main/Pizza.png?raw=true', type: 'food', value: 300, rarity: 'B', effects: { health: 30, energy: 50 } },
 ];
 
 export const HEART_EVENTS: HeartEvent[] = [
@@ -143,7 +146,7 @@ export const INITIAL_QUESTS: Quest[] = [
     type: 'delivery',
     targetItemId: 'salad',
     targetQuantity: 1,
-    rewardStats: { attack: 5, maxHealth: 20 },
+    rewardStats: { energy: 20, maxEnergy: 20 },
     rewardFriendship: 50,
     status: 'available'
   },
@@ -255,6 +258,26 @@ export const AVATARS = [
 
 export const SKIN_COLORS = ['#f5d0c5', '#e8b5a0', '#c68642', '#8d5524', '#3c2e28'];
 export const HAIR_COLORS = ['#4a2c2a', '#2c1e1e', '#8b5e34', '#d4a373', '#9b2226', '#5a189a', '#0077b6'];
+
+export const SHOP_ITEMS: ShopItem[] = [
+  // Items
+  { id: 'shop_diamond', name: 'Diamond', description: 'A rare and valuable gem.', price: 1000, type: 'item', item: ITEMS.find(i => i.id === 'diamond') },
+  { id: 'shop_coffee', name: 'Coffee', description: 'Gives you a boost of energy.', price: 300, type: 'item', item: ITEMS.find(i => i.id === 'coffee') },
+  { id: 'shop_prismatic', name: 'Prismatic Shard', description: 'One of the rarest items in the world.', price: 5000, type: 'item', item: ITEMS.find(i => i.id === 'prismatic_shard') },
+  
+  // Avatars
+  { id: 'avatar_wizard', name: 'Wizard Avatar', description: 'Look like the local wizard.', price: 1500, type: 'avatar', image: 'https://stardewvalleywiki.com/mediawiki/images/c/c3/Wizard.png' },
+  { id: 'avatar_krobus', name: 'Krobus Avatar', description: 'A friendly shadow person.', price: 2000, type: 'avatar', image: 'https://stardewvalleywiki.com/mediawiki/images/7/71/Krobus.png' },
+  
+  // Borders
+  { id: 'border_gold', name: 'Golden Border', description: 'A shiny gold border for your profile.', price: 1000, type: 'border' },
+  { id: 'border_magic', name: 'Magic Glow', description: 'A mystical purple glow.', price: 2500, type: 'border' },
+  
+  // Backgrounds
+  { id: 'bg_forest', name: 'Secret Woods', description: 'A lush forest background.', price: 1200, type: 'background', image: 'https://stardewvalleywiki.com/mediawiki/images/b/ba/Secret_Woods.png' },
+  { id: 'bg_desert', name: 'Calico Desert', description: 'A dry desert background.', price: 1200, type: 'background', image: 'https://stardewvalleywiki.com/mediawiki/images/5/53/Desert.png' },
+];
+
 export const HAIR_STYLES = [
   'https://github.com/FairyOfTheBog/myimgsources/blob/main/Untitled2_20260403202912.png?raw=true',
   'https://github.com/FairyOfTheBog/myimgsources/blob/main/Untitled2_20260403210719.png?raw=true',

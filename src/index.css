@@ -24,13 +24,13 @@
   }
 
   .avatar {
-    @apply w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden border-2 md:border-4 border-orange-500 bg-white relative;
+    @apply w-[100px] h-[100px] rounded-full overflow-hidden border-4 border-yellow-400 bg-white relative;
   }
 
   .avatar img {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: fill;
     image-rendering: pixelated;
   }
 }
@@ -89,6 +89,14 @@
   image-rendering: pixelated;
 }
 
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Custom scrollbar for pixel look */
 ::-webkit-scrollbar {
   width: 8px;
@@ -108,12 +116,34 @@
   background: #a67c52;
 }
 
-* {
+body {
   overflow-x: hidden;
 }
 
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 .custom-scrollbar {
-  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #fefefe #000000;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #fefefe;
+  border-radius: 10px;
 }
 
 /* Suppress all stray scrollbars */
@@ -125,4 +155,9 @@ select {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
+}
+
+/* Let home tab main area use full available height */
+.home-main {
+  height: calc(100dvh - 177px - 60px);
 }

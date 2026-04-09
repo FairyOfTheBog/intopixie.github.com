@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { InventoryItem, Rarity } from '../types';
 import { Search, ArrowUpDown, Filter, Coins } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { sounds } from '../services/soundManager';
 
 interface InventoryProps {
   items: (InventoryItem | null)[];
@@ -19,11 +20,13 @@ export default function Inventory({ items, onItemClick, onUseItem, onSplitStack 
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const rarityOrder: Record<Rarity, number> = {
-    'Common': 0,
-    'Uncommon': 1,
-    'Rare': 2,
-    'Epic': 3,
-    'Legendary': 4
+    'C': 0,
+    'B': 1,
+    'A': 2,
+    'S': 3,
+    'SS': 4,
+    'SSS': 5,
+    'SSR': 6
   };
 
   const filteredAndSortedItems = useMemo(() => {
@@ -62,22 +65,26 @@ export default function Inventory({ items, onItemClick, onUseItem, onSplitStack 
 
   const getRarityBorder = (rarity: Rarity) => {
     switch (rarity) {
-      case 'Common': return 'border-gray-500/30';
-      case 'Uncommon': return 'border-green-500/50';
-      case 'Rare': return 'border-blue-500/60';
-      case 'Epic': return 'border-purple-500/70';
-      case 'Legendary': return 'border-orange-500/80 shadow-[inset_0_0_10px_rgba(255,165,0,0.2)]';
+      case 'C': return 'border-gray-500/30';
+      case 'B': return 'border-green-500/50';
+      case 'A': return 'border-blue-500/60';
+      case 'S': return 'border-purple-500/70';
+      case 'SS': return 'border-orange-500/80 shadow-[inset_0_0_10px_rgba(255,165,0,0.2)]';
+      case 'SSS': return 'border-red-600 shadow-[0_0_8px_rgba(220,38,38,0.4)]';
+      case 'SSR': return 'border-yellow-400 shadow-[0_0_12px_rgba(255,215,0,0.6)] ring-1 ring-yellow-400/50';
       default: return 'border-white/10';
     }
   };
 
   const getRarityBg = (rarity: Rarity) => {
     switch (rarity) {
-      case 'Common': return 'bg-gray-500/5';
-      case 'Uncommon': return 'bg-green-500/5';
-      case 'Rare': return 'bg-blue-500/5';
-      case 'Epic': return 'bg-purple-500/5';
-      case 'Legendary': return 'bg-orange-500/5';
+      case 'C': return 'bg-gray-500/5';
+      case 'B': return 'bg-green-500/5';
+      case 'A': return 'bg-blue-500/5';
+      case 'S': return 'bg-purple-500/5';
+      case 'SS': return 'bg-orange-500/5';
+      case 'SSS': return 'bg-red-600/10';
+      case 'SSR': return 'bg-gradient-to-br from-yellow-400/10 via-pink-500/10 to-blue-500/10';
       default: return 'bg-white/5';
     }
   };
@@ -104,7 +111,7 @@ export default function Inventory({ items, onItemClick, onUseItem, onSplitStack 
             <ArrowUpDown className="absolute left-2 top-1/2 -translate-y-1/2 opacity-70" size={14} />
             <select 
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              onChange={(e) => { setSortBy(e.target.value as SortOption); sounds.playSelect(); }}
               className="w-full bg-[#8b623d] pixel-border-inset pl-8 pr-2 py-1.5 text-[13px] font-black text-black outline-none appearance-none cursor-pointer"
             >
               <option value="date">Newest</option>
@@ -119,7 +126,7 @@ export default function Inventory({ items, onItemClick, onUseItem, onSplitStack 
             <Filter className="absolute left-2 top-1/2 -translate-y-1/2 opacity-70" size={14} />
             <select 
               value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
+              onChange={(e) => { setFilterType(e.target.value); sounds.playSelect(); }}
               className="w-full bg-[#8b623d] pixel-border-inset pl-8 pr-2 py-1.5 text-[13px] font-black text-black outline-none appearance-none cursor-pointer"
             >
               <option value="all">All Types</option>
@@ -146,13 +153,22 @@ export default function Inventory({ items, onItemClick, onUseItem, onSplitStack 
                 ${filteredItem ? 'ring-2 ring-yellow-600' : slot ? 'opacity-40' : ''}
                 ${slot ? getRarityBorder(slot.item.rarity) : ''}
               `}
-              onClick={() => slot && onItemClick?.(slot, index)}
+              onClick={() => { if (slot) { onItemClick?.(slot, index); sounds.playSelect(); } }}
               onMouseEnter={() => setHoveredIndex(index)}
               onMouseLeave={() => setHoveredIndex(null)}
             >
               {slot ? (
                 <div className={`w-full h-full flex items-center justify-center ${getRarityBg(slot.item.rarity)}`}>
-                  <span className="text-2xl sm:text-3xl drop-shadow-md">{slot.item.icon}</span>
+                  {slot.item.sprite ? (
+                    <img 
+                      src={slot.item.sprite} 
+                      alt={slot.item.name} 
+                      className="w-10 h-10 object-contain pixelated drop-shadow-md"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <span className="text-2xl sm:text-3xl drop-shadow-md">{slot.item.icon}</span>
+                  )}
                   {slot.quantity > 1 && (
                     <span className="absolute bottom-1 right-1 font-pixel text-[10px] bg-black/80 text-white px-1 rounded border border-white/10">
                       {slot.quantity}
@@ -172,11 +188,13 @@ export default function Inventory({ items, onItemClick, onUseItem, onSplitStack 
                           <div className="flex justify-between items-start mb-2 border-b border-black/10 pb-1">
                             <p className="font-pixel text-[10px] text-black leading-tight">{slot.item.name}</p>
                             <span className={`text-[8px] font-pixel px-1 py-0.5 rounded bg-black/10 ${
-                              slot.item.rarity === 'Common' ? 'text-gray-700' :
-                              slot.item.rarity === 'Uncommon' ? 'text-green-800' :
-                              slot.item.rarity === 'Rare' ? 'text-blue-800' :
-                              slot.item.rarity === 'Epic' ? 'text-purple-800' :
-                              'text-orange-800'
+                              slot.item.rarity === 'C' ? 'text-gray-700' :
+                              slot.item.rarity === 'B' ? 'text-green-800' :
+                              slot.item.rarity === 'A' ? 'text-blue-800' :
+                              slot.item.rarity === 'S' ? 'text-purple-800' :
+                              slot.item.rarity === 'SS' ? 'text-orange-800' :
+                              slot.item.rarity === 'SSS' ? 'text-red-800' :
+                              'text-yellow-800'
                             }`}>
                               {slot.item.rarity}
                             </span>
@@ -213,6 +231,7 @@ export default function Inventory({ items, onItemClick, onUseItem, onSplitStack 
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   onUseItem(index);
+                                  sounds.playSuccess();
                                 }}
                                 className="flex-1 pixel-button py-1 text-[10px] !bg-green-600 hover:!bg-green-500 !text-white"
                               >
@@ -224,6 +243,7 @@ export default function Inventory({ items, onItemClick, onUseItem, onSplitStack 
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   onSplitStack(index);
+                                  sounds.playSelect();
                                 }}
                                 className="flex-1 pixel-button py-1 text-[10px] !bg-blue-600 hover:!bg-blue-500 !text-white"
                               >

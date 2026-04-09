@@ -3,7 +3,7 @@ import { NPC } from "../types";
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
-export async function chatWithNPC(npc: NPC, userMessage: string, playerInfo: any, currentDailyEvent?: any) {
+export async function chatWithNPC(npc: NPC, userMessage: string, playerInfo: any, currentDailyEvent?: any, timeContext?: string, isBirthday?: boolean) {
   const hearts = Math.floor(npc.friendship / 250);
   let relationshipStatus = "Acquaintance";
   if (npc.isMarried) relationshipStatus = "Married";
@@ -15,6 +15,8 @@ export async function chatWithNPC(npc: NPC, userMessage: string, playerInfo: any
   else if (hearts >= 2) relationshipStatus = "Casual Friend";
 
   const eventContext = currentDailyEvent ? `Current Daily Event: ${currentDailyEvent.name} (${currentDailyEvent.description}).` : "";
+  const timeInfo = timeContext ? `Current Time: ${timeContext}.` : "";
+  const birthdayInfo = isBirthday ? "IMPORTANT: Today is your BIRTHDAY! You are feeling extra happy and might mention it or thank the player for remembering." : "";
 
   const model = genAI.models.generateContent({
     model: "gemini-3-flash-preview",
@@ -28,22 +30,26 @@ export async function chatWithNPC(npc: NPC, userMessage: string, playerInfo: any
             Relationship Status: ${relationshipStatus}.
             Player name: ${playerInfo.name}.
             Player gender: ${playerInfo.gender}.
+            ${timeInfo}
             ${eventContext}
+            ${birthdayInfo}
             
             Respond as ${npc.name} in a natural, conversational text-message style (1-2 short sentences). 
+            Capture the unique "Stardew Valley" charm—be cozy, sincere, and character-driven.
             Do not sound like a robot or a quest giver unless appropriate. Be casual and in character.
-            Adjust your tone based on the Relationship Status. 
-            - If Married: Be incredibly loving, supportive, and intimate. Mention home or life together.
-            - If Dating: Be very warm, flirtatious, and open.
-            - If Best Friends: Be very close, trusting, and supportive.
+            Adjust your tone based on the Relationship Status and Time of Day. 
+            - If Married: Be incredibly loving, supportive, and intimate. Mention home, life together, or future plans.
+            - If Dating: Be very warm, flirtatious, and open. Use pet names if appropriate for your character.
+            - If Best Friends: Be very close, trusting, and supportive. Share a small secret or a personal thought.
             - If Acquaintance: Be polite but a bit distant.
             
-            If there is a Current Daily Event, feel free to mention it naturally in your response if it makes sense for your character.
+            Time-specific cues:
+            - Early Morning (6AM-9AM): Mention starting chores, coffee, or the morning air.
+            - Late Night (10PM-2AM): Mention being tired, the stars, or why you're still up.
             
-            CRITICAL: If you choose to send a picture, it MUST be described as a PIXEL ART or 16-BIT style image.
-            To send a picture, include exactly this tag anywhere in your response: [IMAGE: keyword]
-            Replace "keyword" with a single word describing the image (e.g., [IMAGE: pixel-cat], [IMAGE: pixel-coffee], [IMAGE: pixel-sunset]).
-            Only do this occasionally, not every time.
+            If there is a Current Daily Event, mention how it affects your mood or plans.
+            
+            CRITICAL: Do NOT send any images or use image tags. Only respond with text.
             
             Player says: "${userMessage}"`
           }
@@ -56,8 +62,11 @@ export async function chatWithNPC(npc: NPC, userMessage: string, playerInfo: any
   return response.text;
 }
 
-export async function getGiftReaction(npc: NPC, itemName: string, playerInfo: any, currentDailyEvent?: any) {
+export async function getGiftReaction(npc: NPC, itemName: string, playerInfo: any, currentDailyEvent?: any, timeContext?: string, isBirthday?: boolean) {
   const eventContext = currentDailyEvent ? `Current Daily Event: ${currentDailyEvent.name} (${currentDailyEvent.description}).` : "";
+  const timeInfo = timeContext ? `Current Time: ${timeContext}.` : "";
+  const birthdayInfo = isBirthday ? "IMPORTANT: Today is your BIRTHDAY! You are extra touched by this gift. Your reaction should be even more positive than usual if you like the gift." : "";
+  
   const model = genAI.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: [
@@ -67,16 +76,20 @@ export async function getGiftReaction(npc: NPC, itemName: string, playerInfo: an
             text: `You are ${npc.name} from Stardew Valley. 
             Personality: ${npc.personality}. 
             The player (${playerInfo.name}) just gave you a ${itemName}.
+            ${timeInfo}
             ${eventContext}
+            ${birthdayInfo}
             
             Respond as ${npc.name} to this gift. 
-            If it's something you LOVE (check Stardew Valley wiki if needed), be ecstatic.
-            If it's something you LIKE, be happy.
-            If it's something you DISLIKE or HATE, be disappointed or angry.
+            If it's something you LOVE (check Stardew Valley wiki if needed), be ecstatic and mention why it's special to you.
+            If it's something you LIKE, be happy and thankful.
+            If it's something you DISLIKE or HATE, be disappointed, confused, or even a bit grumpy (if that's your personality).
             
-            If there is a Current Daily Event, you can mention it if it makes sense.
+            If it's your birthday, make sure to mention how special it is to receive a gift today!
             
-            Keep it short (1-2 sentences).`
+            If there is a Current Daily Event, you can mention it if it makes sense (e.g., "This will be perfect for the festival!").
+            
+            Keep it short (1-2 sentences) and in character.`
           }
         ]
       }

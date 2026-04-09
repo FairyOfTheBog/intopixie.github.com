@@ -6,6 +6,7 @@ export interface CharacterStats {
   attack: number;
   energy: number;
   maxEnergy: number;
+  luck?: number;
 }
 
 export interface CharacterMakerState {
@@ -17,13 +18,14 @@ export interface CharacterMakerState {
   avatar: string;
 }
 
-export type Rarity = 'Common' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary';
+export type Rarity = 'C' | 'B' | 'A' | 'S' | 'SS' | 'SSS' | 'SSR';
 
 export interface Item {
   id: string;
   name: string;
   description: string;
   icon: string;
+  sprite?: string;
   type: 'gift' | 'food' | 'resource' | 'tool';
   value: number;
   rarity: Rarity;
@@ -111,6 +113,16 @@ export interface Quest {
   requiredFriendship?: number; // Friendship level required to unlock this quest
 }
 
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  type: 'avatar' | 'border' | 'background' | 'item';
+  image?: string;
+  item?: Item;
+}
+
 export interface GameState {
   player: {
     name: string;
@@ -121,6 +133,14 @@ export interface GameState {
     inventory: (InventoryItem | null)[];
     money: number;
     recipes: string[];
+    level: number;
+    experience: number;
+    maxExperience: number;
+    ownedAvatars: string[];
+    ownedBorders: string[];
+    ownedBackgrounds: string[];
+    currentBorder?: string;
+    currentBackground?: string;
   };
   npcs: NPC[];
   quests: Quest[];
@@ -130,5 +150,7 @@ export interface GameState {
   currentDailyEvent?: DailyEvent | null;
   friendships: Record<string, number>;
   triggeredEvents: string[]; // IDs of events already seen
-  chatHistories?: Record<string, { role: 'user' | 'npc', text: string, imageUrl?: string }[]>;
+  lastSpinDate?: string; // YYYY-MM-DD
+  spinCount?: number;
+  chatHistories?: Record<string, { role: 'user' | 'npc', text: string }[]>;
 }

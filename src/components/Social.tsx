@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NPC, GameState, HeartEvent } from '../types';
-import { Heart, MessageSquare, Gift, HeartHandshake, Scroll, CheckCircle, Users } from 'lucide-react';
+import { Heart, MessageSquare, Gift, HeartHandshake, Scroll, CheckCircle, Users, Calendar, Clock, Cake } from 'lucide-react';
 import { chatWithNPC, getGiftReaction } from '../services/geminiService';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
@@ -15,7 +15,7 @@ interface SocialProps {
   onRecordInteraction: (npcId: string) => void;
   onAcceptQuest: (questId: string) => void;
   onCompleteQuest: (questId: string) => void;
-  onUpdateChatHistory: (npcId: string, message: { role: 'user' | 'npc', text: string, imageUrl?: string }) => void;
+  onUpdateChatHistory: (npcId: string, message: { role: 'user' | 'npc', text: string }) => void;
 }
 
 export default function Social({ 
@@ -33,6 +33,7 @@ export default function Social({
   const [chatMessage, setChatMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showGiftModal, setShowGiftModal] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
   const [activeEvent, setActiveEvent] = useState<HeartEvent | null>(null);
   const chatEndRef = React.useRef<HTMLDivElement>(null);
 
@@ -80,6 +81,26 @@ export default function Social({
     }
   };
 
+  const formatTime = (minutes: number) => {
+    const hours = Math.floor(minutes / 60) % 24;
+    const mins = minutes % 60;
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${mins.toString().padStart(2, '0')} ${ampm}`;
+  };
+
+  const getCalendarDate = (totalDays: number) => {
+    const seasons = ['Spring', 'Summer', 'Fall', 'Winter'];
+    const seasonIndex = Math.floor((totalDays - 1) / 28) % 4;
+    const day = ((totalDays - 1) % 28) + 1;
+    return { season: seasons[seasonIndex], day };
+  };
+
+  const isBirthdayToday = (npc: NPC) => {
+    const { season, day } = getCalendarDate(gameState.currentDay);
+    return npc.birthday === `${season} ${day}`;
+  };
+
   const handleChat = async () => {
     if (!selectedNPC || !chatMessage.trim()) return;
     
@@ -90,21 +111,12 @@ export default function Social({
     setIsTyping(true);
 
     try {
-      const response = await chatWithNPC(selectedNPC, userMsg, gameState.player, gameState.currentDailyEvent);
+      const timeStr = formatTime(gameState.currentTime);
+      const isBirthday = isBirthdayToday(selectedNPC);
+      const response = await chatWithNPC(selectedNPC, userMsg, gameState.player, gameState.currentDailyEvent, timeStr, isBirthday);
       
-      // Check if response includes an image tag like [IMAGE: keyword]
-      let text = response || "...";
-      let imageUrl = undefined;
-      const imageMatch = text.match(/\[IMAGE:\s*([^\]]+)\]/i);
-      
-      if (imageMatch) {
-        const keyword = imageMatch[1].trim().replace(/\s+/g, '-');
-        // Use a pixel art style placeholder or just ensure the CSS class is applied
-        imageUrl = `https://picsum.photos/seed/${keyword}-pixel/200/200`;
-        text = text.replace(imageMatch[0], '').trim();
-      }
-
-      onUpdateChatHistory(selectedNPC.id, { role: 'npc', text, imageUrl });
+      const text = response || "...";
+      onUpdateChatHistory(selectedNPC.id, { role: 'npc', text });
       onRecordInteraction(selectedNPC.id);
     } catch (err) {
       console.error(err);
@@ -125,13 +137,20 @@ export default function Social({
 
     setIsTyping(true);
     try {
-      const reaction = await getGiftReaction(selectedNPC, item.name, gameState.player, gameState.currentDailyEvent);
+      const timeStr = formatTime(gameState.currentTime);
+      const isBirthday = isBirthdayToday(selectedNPC);
+      const reaction = await getGiftReaction(selectedNPC, item.name, gameState.player, gameState.currentDailyEvent, timeStr, isBirthday);
       
       let gain = 20;
       if (selectedNPC.loves.includes(item.id)) gain = 80;
       else if (selectedNPC.likes.includes(item.id)) gain = 45;
       else if (selectedNPC.dislikes.includes(item.id)) gain = -20;
       else if (selectedNPC.hates.includes(item.id)) gain = -40;
+
+      // Birthday bonus: 8x friendship gain (Stardew Valley style)
+      if (isBirthday) {
+        gain *= 8;
+      }
 
       const newFriendship = Math.min(2500, Math.max(0, selectedNPC.friendship + gain));
       onUpdateNPC(selectedNPC.id, { friendship: newFriendship });
@@ -142,10 +161,10 @@ export default function Social({
       if (gain > 0) {
         sounds.playSuccess();
         confetti({
-          particleCount: 50,
-          spread: 60,
+          particleCount: isBirthday ? 150 : 50,
+          spread: isBirthday ? 100 : 60,
           origin: { y: 0.7 },
-          colors: ['#ff006e', '#ffbe0b', '#fb5607']
+          colors: isBirthday ? ['#ff006e', '#ffbe0b', '#fb5607', '#ffffff', '#ffd700'] : ['#ff006e', '#ffbe0b', '#fb5607']
         });
       }
     } catch (err) {
@@ -244,24 +263,32 @@ export default function Social({
   return (
     <div className="w-full max-w-5xl mx-auto h-full flex flex-col gap-4 overflow-hidden">
       {/* NPC List - Horizontal Scroll */}
-      <div className={`flex flex-col gap-2 flex-shrink-0 pt-6 ${isChatOpen ? 'hidden md:flex' : 'flex'}`}>
-        <div className="px-4 mb-2">
-          <div className="pixel-card !bg-[#8b623d] !p-2 border-white/20">
-            <h2 className="font-pixel text-[13px] pixel-text-shadow text-white text-center">Villagers You May Know</h2>
+      <div className={`flex flex-col flex-shrink-0 pt-6 ${isChatOpen ? 'hidden md:flex' : 'flex'}`}>
+        <div className="px-4 flex justify-between items-center gap-2">
+          <div className="flex-1 pixel-card !bg-white !p-2 border-black/10">
+            <h2 className="font-pixel text-[13px] text-black text-center uppercase tracking-wider">Villagers You May Know</h2>
           </div>
+          <button 
+            onClick={() => setShowCalendar(true)}
+            className="pixel-button-secondary h-full flex items-center justify-center px-3"
+            title="Calendar"
+          >
+            <Calendar size={16} />
+          </button>
         </div>
-        <div className="flex overflow-x-auto pb-6 gap-6 scrollbar-hide px-4 snap-x">
+        <div className="flex overflow-x-auto py-4 gap-6 scrollbar-hide px-4 snap-x">
           {gameState.npcs.map(npc => {
             const questStatus = (gameState.quests || []).find(q => 
               q.giverId === npc.id && 
               (q.status === 'active' || (q.status === 'available' && (q.requiredFriendship === undefined || npc.friendship >= q.requiredFriendship)))
             )?.status;
+            const isBirthday = isBirthdayToday(npc);
 
             return (
               <div 
                 key={npc.id}
                 onClick={() => handleNPCSelect(npc)}
-                className={`flex-shrink-0 w-32 h-40 pixel-card cursor-pointer transition-all hover:-translate-y-1 flex flex-col items-center justify-between p-3 relative !bg-[#a67c52] border-white/20 snap-start ${selectedNPC?.id === npc.id ? 'ring-2 ring-white scale-105 z-10' : ''}`}
+                className={`flex-shrink-0 w-32 h-40 pixel-card cursor-pointer transition-all hover:-translate-y-1 flex flex-col items-center justify-between p-3 relative !bg-[#E3AD69] border-[3px] border-black snap-start ${selectedNPC?.id === npc.id ? 'ring-2 ring-white scale-105 z-10' : ''}`}
               >
                 <div className="relative mb-2">
                   <motion.img 
@@ -278,6 +305,11 @@ export default function Social({
                       ease: "easeInOut" 
                     }}
                   />
+                  {isBirthday && (
+                    <div className="absolute -top-2 -left-2 bg-pink-500 text-white p-1 rounded-full border-2 border-white shadow-lg animate-bounce z-20" title="It's their birthday!">
+                      <Cake size={12} />
+                    </div>
+                  )}
                   {questStatus === 'available' && (
                     <div className="absolute -top-1 -right-1 bg-yellow-400 text-black font-pixel text-[10px] w-5 h-5 flex items-center justify-center rounded-full border-2 border-black animate-bounce">
                       !
@@ -291,7 +323,7 @@ export default function Social({
                 </div>
                 
                 <div className="text-center w-full">
-                  <p className="font-pixel text-[11px] text-white truncate mb-1">{npc.name}</p>
+                  <p className="font-pixel text-[11px] text-black truncate mb-1">{npc.name}</p>
                   <div className="flex flex-col gap-1 items-center">
                     <div className="flex gap-0.5">
                       {[...Array(5)].map((_, i) => (
@@ -299,7 +331,7 @@ export default function Social({
                           key={i} 
                           size={8} 
                           fill={i < Math.floor(npc.friendship / 500) ? "#ff006e" : "transparent"} 
-                          color={i < Math.floor(npc.friendship / 500) ? "#ff006e" : "#444"} 
+                          color={i < Math.floor(npc.friendship / 500) ? "#ff006e" : "#000"} 
                         />
                       ))}
                     </div>
@@ -327,7 +359,7 @@ export default function Social({
       {/* Chat/Interaction Area */}
       <div className={`flex-1 h-full ${isChatOpen ? 'flex' : 'hidden md:flex'} flex-col overflow-hidden`}>
           {selectedNPC ? (
-            <div className="pixel-card h-full flex flex-col overflow-hidden relative !bg-[#a67c52] border-white/20">
+            <div className="pixel-card h-full flex flex-col overflow-hidden relative !bg-[#E3AD69] border-[3px] border-black">
               {/* Mobile Back Button */}
               <button 
                 onClick={closeChat}
@@ -336,7 +368,7 @@ export default function Social({
                 <CheckCircle className="rotate-180 text-white" size={16} />
               </button>
 
-              <div className="flex items-center gap-6 border-b border-white/20 pb-4 mb-4 mt-8 md:mt-0">
+              <div className="flex items-center gap-6 border-b border-black/10 pb-4 mb-4 mt-8 md:mt-0">
                 <motion.img 
                   src={selectedNPC.avatar} 
                   alt={selectedNPC.name} 
@@ -353,17 +385,21 @@ export default function Social({
                 />
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
-                    <h3 className="font-pixel text-[13px] text-white">{selectedNPC.name}</h3>
-                    {selectedNPC.isMarried && <span className="text-[10px] bg-yellow-500/40 text-yellow-200 px-1.5 rounded border border-yellow-500/30 font-pixel">Spouse</span>}
-                    {selectedNPC.isDating && <span className="text-[10px] bg-pink-500/40 text-pink-200 px-1.5 rounded border border-pink-500/30 font-pixel">Dating</span>}
+                    <h3 className="font-pixel text-[13px] text-black">{selectedNPC.name}</h3>
+                    {isBirthdayToday(selectedNPC) && <span className="text-[10px] bg-pink-500/40 text-pink-900 px-1.5 rounded border border-pink-500/30 font-pixel flex items-center gap-1"><Cake size={10} /> Birthday!</span>}
+                    {selectedNPC.isMarried && <span className="text-[10px] bg-yellow-500/40 text-yellow-800 px-1.5 rounded border border-yellow-500/30 font-pixel">Spouse</span>}
+                    {selectedNPC.isDating && <span className="text-[10px] bg-pink-500/40 text-pink-800 px-1.5 rounded border border-pink-500/30 font-pixel">Dating</span>}
                   </div>
-                  <p className="text-[13px] text-white/90 mt-1">{selectedNPC.description}</p>
-                  <p className="text-[11px] text-white/70 mt-1 italic">Birthday: {selectedNPC.birthday}</p>
+                  <p className="text-[13px] text-black/80 mt-1">{selectedNPC.description}</p>
+                  <div className="flex items-center gap-1.5 mt-2 bg-black/10 px-2 py-1 rounded border border-black/5 w-fit">
+                    <Clock size={10} className="text-pink-600" />
+                    <span className="text-[10px] font-pixel text-black/60">Birthday: {selectedNPC.birthday}</span>
+                  </div>
                   
                   <div className="mt-3">
                     <div className="flex justify-between items-center text-[10px] font-pixel mb-1">
-                      <span className="text-pink-200">{getNextMilestone(selectedNPC).text}</span>
-                      <span className="text-white">{selectedNPC.friendship} / {getNextMilestone(selectedNPC).target}</span>
+                      <span className="text-pink-700">{getNextMilestone(selectedNPC).text}</span>
+                      <span className="text-black">{selectedNPC.friendship} / {getNextMilestone(selectedNPC).target}</span>
                     </div>
                     <div className="w-full bg-black/50 h-3 pixel-border-inset relative overflow-hidden">
                       <div 
@@ -381,16 +417,13 @@ export default function Social({
               </div>
 
               {/* Chat History */}
-              <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-3 bg-black/30 pixel-border-inset rounded">
+              <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 mb-4 p-3 bg-black/30 pixel-border-inset rounded">
                 {(!gameState.chatHistories?.[selectedNPC.id] || gameState.chatHistories[selectedNPC.id].length === 0) && (
                   <p className="text-center text-white/40 text-[13px] mt-10 font-pixel">Start a conversation with {selectedNPC.name}...</p>
                 )}
                 {(gameState.chatHistories?.[selectedNPC.id] || []).map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[85%] p-3 rounded pixel-border ${msg.role === 'user' ? 'bg-[#ff9e9e] text-black' : 'bg-[#9ed5ff] text-black'}`}>
-                      {msg.imageUrl && (
-                        <img src={msg.imageUrl} alt="Sent picture" className="w-full max-w-[200px] mb-2 pixelated border-2 border-black/20" referrerPolicy="no-referrer" />
-                      )}
                       <p className="text-[13px] leading-tight font-medium">{msg.text}</p>
                     </div>
                   </div>
@@ -466,8 +499,10 @@ export default function Social({
                           {quest.rewardItem && <span className="text-blue-300">1x {quest.rewardItem.name}</span>}
                           {quest.rewardStats && (
                             <span className="text-red-300">
-                              +{quest.rewardStats.attack ? `${quest.rewardStats.attack} ATK ` : ''}
-                              +{quest.rewardStats.maxHealth ? `${quest.rewardStats.maxHealth} HP ` : ''}
+                              {quest.rewardStats.attack ? `+${quest.rewardStats.attack} ENERGY ` : ''}
+                              {quest.rewardStats.energy ? `+${quest.rewardStats.energy} ENERGY ` : ''}
+                              {quest.rewardStats.maxEnergy ? `+${quest.rewardStats.maxEnergy} MAX ENERGY ` : ''}
+                              {quest.rewardStats.maxHealth ? `+${quest.rewardStats.maxHealth} HP ` : ''}
                             </span>
                           )}
                           {quest.rewardRecipe && <span className="text-purple-300">Recipe: {quest.rewardRecipe}</span>}
@@ -525,8 +560,8 @@ export default function Social({
               </div>
             </div>
           ) : (
-            <div className="pixel-card h-full flex items-center justify-center !bg-[#a67c52] border-white/20">
-              <p className="font-pixel text-[13px] text-white opacity-60">Select a character to interact</p>
+            <div className="pixel-card h-full flex items-center justify-center !bg-[#E3AD69] border-[3px] border-black">
+              <p className="font-pixel text-[13px] text-black opacity-60">Select a character to interact</p>
             </div>
           )}
         </div>
@@ -599,6 +634,60 @@ export default function Social({
                     {choice.text}
                   </button>
                 ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Calendar Modal */}
+      <AnimatePresence>
+        {showCalendar && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/90">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="pixel-card w-full max-w-2xl bg-[#5d4037] max-h-[90vh] overflow-hidden flex flex-col"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-3">
+                  <Calendar className="text-yellow-400" size={20} />
+                  <h2 className="font-pixel text-xs text-yellow-400">Town Calendar</h2>
+                </div>
+                <button onClick={() => setShowCalendar(false)} className="pixel-button py-1 px-3">X</button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {['Spring', 'Summer', 'Fall', 'Winter'].map(season => (
+                    <div key={season} className="pixel-card bg-black/20 border-white/5">
+                      <h3 className="font-pixel text-[10px] text-white mb-3 border-b border-white/10 pb-1">{season}</h3>
+                      <div className="space-y-2">
+                        {gameState.npcs
+                          .filter(npc => npc.birthday.startsWith(season))
+                          .sort((a, b) => parseInt(a.birthday.split(' ')[1]) - parseInt(b.birthday.split(' ')[1]))
+                          .map(npc => (
+                            <div key={npc.id} className="flex items-center gap-2 bg-white/5 p-1.5 rounded">
+                              <img src={npc.avatar} className="w-8 h-8 pixelated" referrerPolicy="no-referrer" />
+                              <div className="flex-1">
+                                <p className="font-pixel text-[9px] text-white">{npc.name}</p>
+                                <p className="text-[8px] text-pink-300 font-pixel">{npc.birthday}</p>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-white/10 text-center">
+                <p className="text-[10px] text-white/60 font-pixel">
+                  Current Date: {Math.floor((gameState.currentDay - 1) / 28) % 4 === 0 ? 'Spring' : 
+                                Math.floor((gameState.currentDay - 1) / 28) % 4 === 1 ? 'Summer' : 
+                                Math.floor((gameState.currentDay - 1) / 28) % 4 === 2 ? 'Fall' : 'Winter'} {((gameState.currentDay - 1) % 28) + 1}
+                </p>
               </div>
             </motion.div>
           </div>
